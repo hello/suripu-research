@@ -1,27 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>suripu-parent</artifactId>
-        <groupId>com.hello.suripu</groupId>
-        <version>0.5.93-SNAPSHOT</version>
-    </parent>
-    <modelVersion>4.0.0</modelVersion>
-
     <artifactId>suripu-research</artifactId>
+    <groupId>com.hello.suripu</groupId>
+    <modelVersion>4.0.0</modelVersion>
     <version>0.5.93-SNAPSHOT</version>
+
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.7</java.version>
+        <suripu.version>0.5.88</suripu.version>
+        <jodatime.version>20150319</jodatime.version>
         <dropwizard.version>0.6.2</dropwizard.version>
     </properties>
+
+    <distributionManagement>
+        <site>
+            <id>s3.site</id>
+            <url>s3://hello-maven/site</url>
+        </site>
+        <repository>
+            <id>s3.release</id>
+            <url>s3://hello-maven/release</url>
+        </repository>
+        <snapshotRepository>
+            <id>s3.snapshot</id>
+            <url>s3://hello-maven/snapshot</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <repositories>
+        <repository>
+            <id>project.local</id>
+            <name>project</name>
+            <url>file:${project.basedir}/repo</url>
+        </repository>
+        <repository>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>warn</checksumPolicy>
+            </releases>
+            <id>s3.release</id>
+            <name>Hello Releases</name>
+            <url>s3://hello-maven/release</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>central</id>
+            <url>https://repo1.maven.org/maven2</url>
+        </pluginRepository>
+    </pluginRepositories>
+
     <dependencies>
         <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-core</artifactId>
-            <version>0.5.93-SNAPSHOT</version>
+            <version>${suripu.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-coredw</artifactId>
-            <version>0.5.93-SNAPSHOT</version>
+            <version>${suripu.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -57,6 +98,13 @@
     </dependencies>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.kuali.maven.wagons</groupId>
+                <artifactId>maven-s3-wagon</artifactId>
+                <version>1.2.1</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -103,6 +151,43 @@
                         </manifest>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.3</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.17</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.17</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*Test.java</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>verify</goal>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
