@@ -68,9 +68,9 @@ common_db:
 
 research_db:
   driverClass: org.postgresql.Driver
-  user: research_user
-  password: hello-research-user
-  url: jdbc:postgresql://research.cdawj8qazvva.us-east-1.rds.amazonaws.com:5432/research
+  user: ingress_user
+  password: hello ingress user
+  url: jdbc:postgresql://chanku-test.cdawj8qazvva.us-east-1.rds.amazonaws.com:5432/chanku
   properties:
     hibernate.dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
 
@@ -156,3 +156,56 @@ kinesis_logger:
   enabled : true
   buffer_size: 100
   origin: suripu-research
+sleephmm_db:
+  endpoint : http://dynamodb.us-east-1.amazonaws.com
+  region: us-east-1
+  table_name: sleephmm
+
+ring_history_db:
+  endpoint : http://dynamodb.us-east-1.amazonaws.com
+  region: us-east-1
+  table_name: prod_ring_history
+
+# store sleep scores and other stats
+# v0.2: score uses movement and duration
+sleep_stats_db:
+    endpoint : http://dynamodb.us-east-1.amazonaws.com
+    region: us-east-1
+    table_name: prod_sleep_stats
+sleep_stats_version: v_0_2
+
+timeline_log_db:
+  endpoint: http://dynamodb.us-east-1.amazonaws.com
+  region: us-east-1
+  table_name: prod_timeline_log
+
+feature_extraction_models:
+#  endpoint : http://dynamodb.us-east-1.amazonaws.com
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: feature_extraction_models
+
+online_hmm_models:
+#  endpoint : http://dynamodb.us-east-1.amazonaws.com
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: online_hmm_models
+
+calibration:
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: calibration
+
+device_data:
+  endpoint: http://dynamodb.us-east-1.amazonaws.com
+  region: us-east-1
+  table_name: sense_data
+
+timeline_model_ensembles:
+  bucket: hello-timeline-models
+  key: normal4ensemble.base64
+#  key: independent4.base64
+
+timeline_seed_model:
+  bucket: hello-timeline-models
+  key: normal4.base64

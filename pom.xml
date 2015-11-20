@@ -11,6 +11,8 @@
         <suripu.version>0.5.88</suripu.version>
         <jodatime.version>20150319</jodatime.version>
         <dropwizard.version>0.6.2</dropwizard.version>
+        <localcore.version>0.5.79</localcore.version>
+        <aws.sdk.version>1.9.37</aws.sdk.version>
     </properties>
 
     <distributionManagement>
@@ -50,14 +52,43 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk</artifactId>
+            <version>${aws.sdk.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>joda-time</artifactId>
+                    <groupId>joda-time</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-core</artifactId>
-            <version>${suripu.version}</version>
+            <!--<scope>system</scope>-->
+            <!--<systemPath>suripu/suripu-core/target/suripu-core-${localcore.version}.jar</systemPath>-->
+            <version>${localcore.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-coredw</artifactId>
-            <version>${suripu.version}</version>
+            <!--<scope>system</scope>-->
+            <!--<systemPath>suripu/suripu-coredw/target/suripu-coredw-${localcore.version}.jar</systemPath>-->
+            <version>${localcore.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hello.suripu</groupId>
+            <artifactId>suripu-algorithm</artifactId>
+            <!--<scope>system</scope>-->
+            <!--<systemPath>suripu/suripu-algorithm/target/suripu-algorithm-${localcore.version}.jar</systemPath>-->
+            <version>${localcore.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hello.suripu</groupId>
+            <artifactId>suripu-api</artifactId>
+            <!--<scope>system</scope>-->
+            <!--<systemPath>suripu/suripu-api/target/suripu-api-${localcore.version}.jar</systemPath>-->
+            <version>${localcore.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -80,6 +111,11 @@
             <version>${dropwizard.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.yammer.dropwizard</groupId>
+            <artifactId>dropwizard-auth</artifactId>
+            <version>${dropwizard.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.squareup.dagger</groupId>
             <artifactId>dagger</artifactId>
             <version>1.2.2</version>
@@ -89,6 +125,11 @@
             <artifactId>dagger-compiler</artifactId>
             <version>1.2.2</version>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.10</version>
         </dependency>
     </dependencies>
 
