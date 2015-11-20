@@ -34,6 +34,23 @@ common_db:
   properties:
     charSet: UTF-8
 
+research_db:
+  # the name of your JDBC driver
+  driverClass: org.postgresql.Driver
+
+  # the username
+  user: your local-db user name
+
+  # the password
+  password: your local-db password
+
+  # the JDBC URL
+  url: jdbc:postgresql://localhost:5432/research
+
+  # any properties specific to your JDBC driver:
+  properties:
+    charSet: UTF-8
+
 
 http:
 
@@ -92,3 +109,57 @@ kinesis_logger:
   enabled : false
   buffer_size: 100
   origin: suripu-research
+
+sleephmm_db:
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: sleephmm
+
+ring_history_db:
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: ring_history
+
+# store sleep scores and other stats
+# v0.2: score uses movement and duration
+sleep_stats_db:
+    endpoint : http://localhost:7777
+    region: us-east-1
+    table_name: prod_sleep_stats
+sleep_stats_version: v_0_2
+
+timeline_log_db:
+  endpoint: http://dynamodb.us-east-1.amazonaws.com
+  region: us-east-1
+  table_name: timeline_log
+
+feature_extraction_models:
+#  endpoint : http://dynamodb.us-east-1.amazonaws.com
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: feature_extraction_models
+
+online_hmm_models:
+#  endpoint : http://dynamodb.us-east-1.amazonaws.com
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: online_hmm_models
+
+calibration:
+  endpoint : http://localhost:7777
+  region: us-east-1
+  table_name: calibration
+
+device_data:
+  endpoint: http://localhost:7777
+  region: us-east-1
+  table_name: sense_data
+
+timeline_model_ensembles:
+  bucket: hello-timeline-models
+  key: normal4ensemble.base64
+#  key: independent4.base64
+
+timeline_seed_model:
+  bucket: hello-timeline-models
+  key: normal4.base64
