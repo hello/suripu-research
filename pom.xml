@@ -8,10 +8,9 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>1.7</java.version>
-        <suripu.version>0.5.88</suripu.version>
+        <suripu.version>0.6.42</suripu.version>
         <jodatime.version>20150319</jodatime.version>
         <dropwizard.version>0.6.2</dropwizard.version>
-        <localcore.version>0.5.79</localcore.version>
         <aws.sdk.version>1.9.37</aws.sdk.version>
     </properties>
 
@@ -65,30 +64,22 @@
         <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-core</artifactId>
-            <!--<scope>system</scope>-->
-            <!--<systemPath>suripu/suripu-core/target/suripu-core-${localcore.version}.jar</systemPath>-->
-            <version>${localcore.version}</version>
+            <version>${suripu.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-coredw</artifactId>
-            <!--<scope>system</scope>-->
-            <!--<systemPath>suripu/suripu-coredw/target/suripu-coredw-${localcore.version}.jar</systemPath>-->
-            <version>${localcore.version}</version>
+            <version>${suripu.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-algorithm</artifactId>
-            <!--<scope>system</scope>-->
-            <!--<systemPath>suripu/suripu-algorithm/target/suripu-algorithm-${localcore.version}.jar</systemPath>-->
-            <version>${localcore.version}</version>
+            <version>${suripu.version}</version>
         </dependency>
         <dependency>
             <groupId>com.hello.suripu</groupId>
             <artifactId>suripu-api</artifactId>
-            <!--<scope>system</scope>-->
-            <!--<systemPath>suripu/suripu-api/target/suripu-api-${localcore.version}.jar</systemPath>-->
-            <version>${localcore.version}</version>
+            <version>${suripu.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
