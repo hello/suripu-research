@@ -11,9 +11,11 @@ import com.hello.suripu.algorithm.hmm.HmmDecodedResult;
 import com.hello.suripu.algorithm.sleep.SleepEvents;
 import com.hello.suripu.algorithm.sleep.Vote;
 import com.hello.suripu.api.datascience.SleepHmmProtos;
+import com.hello.suripu.core.algorithmintegration.AlgorithmFactory;
 import com.hello.suripu.core.algorithmintegration.OneDaysSensorData;
 import com.hello.suripu.core.algorithmintegration.OnlineHmm;
 import com.hello.suripu.core.algorithmintegration.OnlineHmmSensorDataBinning;
+import com.hello.suripu.core.algorithmintegration.TimelineAlgorithmResult;
 import com.hello.suripu.core.db.AccountDAO;
 import com.hello.suripu.core.db.DefaultModelEnsembleDAO;
 import com.hello.suripu.core.db.DeviceDAO;
@@ -43,11 +45,13 @@ import com.hello.suripu.core.models.Timeline;
 import com.hello.suripu.core.models.TimelineFeedback;
 import com.hello.suripu.core.models.TimelineResult;
 import com.hello.suripu.core.models.TrackerMotion;
+import com.hello.suripu.core.models.timeline.v2.TimelineLog;
 import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
 import com.hello.suripu.core.oauth.Scope;
 import com.hello.suripu.core.processors.TimelineProcessor;
 import com.hello.suripu.core.resources.BaseResource;
+import com.hello.suripu.core.util.AlgorithmType;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.core.util.FeatureExtractionModelData;
 import com.hello.suripu.core.util.FeedbackUtils;
@@ -83,6 +87,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -783,17 +788,23 @@ public class PredictionResource extends BaseResource {
 
          /*  pull out algorithm type */
 
+        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO,priorsDAO,defaultModelEnsembleDAO,featureExtractionModelsDAO,Optional.<UUID>absent());
+
+        final TimelineLog timelineLog = new TimelineLog(accountId,dateOfNight.getMillis());
+
+        Optional<TimelineAlgorithmResult> resultOptional = Optional.absent();
+
         switch (algorithm) {
             case ALGORITHM_VOTING:
-                events = getVotingEvents(oneDaysSensorData.allSensorSampleList, oneDaysSensorData.trackerMotions);
+                resultOptional = factory.get(AlgorithmType.VOTING).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
                 break;
 
             case ALGORITHM_HIDDEN_MARKOV:
-                events = getHmmEvents(targetDate,endDate,currentTimeMillis,accountId,oneDaysSensorData.allSensorSampleList,oneDaysSensorData.trackerMotions,hmmDAO);
+                resultOptional = factory.get(AlgorithmType.HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
                 break;
 
             case ALGORITHM_ONLINEHMM:
-                events = getOnlineHmmEvents(dateOfNight, targetDate, endDate, accountId,oneDaysSensorData,defaultModelEnsembleDAO,featureExtractionModelsDAO,priorsDAO,forceLearning);
+                resultOptional = factory.get(AlgorithmType.ONLINE_HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
                 break;
 
             default:
@@ -802,9 +813,11 @@ public class PredictionResource extends BaseResource {
 
         }
 
+        if (resultOptional.isPresent()) {
+            events = resultOptional.get().mainEvents.values().asList();
+        }
 
-
-
+        
         final List<FeedbackUtils.EventWithTime> feedbacksAsEvents = FeedbackUtils.getFeedbackEventsWithOriginalTime(oneDaysSensorData.feedbackList.asList(), oneDaysSensorData.timezoneOffsetMillis);
 
         LOGGER.debug("got {} pieces of feedback",feedbacksAsEvents.size());
