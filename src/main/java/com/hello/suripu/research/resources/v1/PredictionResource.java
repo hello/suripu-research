@@ -53,6 +53,7 @@ import com.hello.suripu.core.util.FeatureExtractionModelData;
 import com.hello.suripu.core.util.FeedbackUtils;
 import com.hello.suripu.core.util.JsonError;
 import com.hello.suripu.core.util.MultiLightOutUtils;
+import com.hello.suripu.core.util.OutlierFilter;
 import com.hello.suripu.core.util.PartnerDataUtils;
 import com.hello.suripu.core.util.SleepHmmWithInterpretation;
 import com.hello.suripu.core.util.SoundUtils;
@@ -94,8 +95,9 @@ import java.util.UUID;
 
 @Path("/v1/prediction")
 public class PredictionResource extends BaseResource {
+    private static final long OUTLIER_GUARD_DURATION = 7200000L;
+    private static final long DOMINANT_GROUP_DURATION = 21600000L;
 
-    private static final String ALGORITHM_SLEEP_SCORED = "sleep_score";
     private static final String ALGORITHM_VOTING = "voting";
     private static final String ALGORITHM_HIDDEN_MARKOV = "hmm";
     private static final String ALGORITHM_ONLINEHMM = "online";
@@ -336,7 +338,7 @@ public class PredictionResource extends BaseResource {
     }
 
 
-    public SensorData getSensorData(final DateTime targetDate,final DateTime endDate, final Long accountId, boolean usePartnerFilter) {
+    public SensorData getSensorData(final DateTime targetDate,final DateTime endDate, final Long accountId, boolean usePartnerFilter,boolean useOutlierFilter) {
         final Optional<DeviceAccountPair> deviceIdPair = deviceDAO.getMostRecentSensePairByAccountId(accountId);
 
         if (!deviceIdPair.isPresent()) {
@@ -345,8 +347,13 @@ public class PredictionResource extends BaseResource {
         }
 
         /* Get "Pill" data  */
-        final List<TrackerMotion> myMotions = trackerMotionDAO.getBetweenLocalUTC(accountId, targetDate, endDate);
-        final List<TrackerMotion> partnerMotions = getPartnerTrackerMotion(accountId, targetDate, endDate);
+        List<TrackerMotion> myMotions = trackerMotionDAO.getBetweenLocalUTC(accountId, targetDate, endDate);
+        List<TrackerMotion> partnerMotions = getPartnerTrackerMotion(accountId, targetDate, endDate);
+
+        if (useOutlierFilter) {
+            myMotions = OutlierFilter.removeOutliers(myMotions,OUTLIER_GUARD_DURATION,DOMINANT_GROUP_DURATION);
+            partnerMotions = OutlierFilter.removeOutliers(partnerMotions,OUTLIER_GUARD_DURATION,DOMINANT_GROUP_DURATION);
+        }
 
         LOGGER.debug("Length of trackerMotion: {}, partnerTrackerMotion: {}", myMotions.size(),partnerMotions.size());
 
@@ -405,7 +412,9 @@ public class PredictionResource extends BaseResource {
     public AlphabetsAndLabels getAlphabetsByUser(  @Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
                                                          @PathParam("account_id") final  Long accountId,
                                                          @PathParam("query_date_local_utc") final String strTargetDate,
-                                                         @DefaultValue("true") @QueryParam("partner_filter") final Boolean usePartnerFilter
+                                                         @DefaultValue("true") @QueryParam("partner_filter") final Boolean usePartnerFilter,
+                                                         @DefaultValue("false") @QueryParam("outlier_filter") final Boolean useOutlierFilter
+
     ) {
 
 
@@ -422,7 +431,7 @@ public class PredictionResource extends BaseResource {
         LOGGER.debug("End date: {}", endDate);
 
 
-        final SensorData allData = getSensorData(targetDate,endDate,accountId,usePartnerFilter);
+        final SensorData allData = getSensorData(targetDate,endDate,accountId,usePartnerFilter,useOutlierFilter);
 
         if (allData.myMotion.isEmpty()) {
             throw new WebApplicationException(Response.status(Response.Status.NO_CONTENT)
@@ -498,7 +507,10 @@ public class PredictionResource extends BaseResource {
                                                                    @PathParam("account_id") final  Long accountId,
                                                                    @PathParam("date_string") final  String dateString,
                                                                    @PathParam("num_days") final  Integer numDays,
-                                                                   @DefaultValue("true") @QueryParam("partner_filter") final Boolean usePartnerFilter) {
+                                                                   @DefaultValue("true") @QueryParam("partner_filter") final Boolean usePartnerFilter,
+                                                                   @DefaultValue("false") @QueryParam("outlier_filter") final Boolean useOutlierFilter
+
+    ) {
 
 
         final Optional<DeviceAccountPair> deviceIdPair = deviceDAO.getMostRecentSensePairByAccountId(accountId);
@@ -588,7 +600,7 @@ public class PredictionResource extends BaseResource {
             final DateTime startTime = night.withHourOfDay(20);
             final DateTime endTime = startTime.plusHours(16);
 
-            final Optional<OneDaysSensorData> oneDaysSensorDataOptional = getOneDaysSensorData(accountId,night,startTime,endTime,usePartnerFilter,true);
+            final Optional<OneDaysSensorData> oneDaysSensorDataOptional = getOneDaysSensorData(accountId,night,startTime,endTime,usePartnerFilter,true,useOutlierFilter);
 
             if (!oneDaysSensorDataOptional.isPresent()) {
                 LOGGER.info("skipping {} because no feedback found or is invalid night",DateTimeUtil.dateToYmdString(night));
@@ -640,7 +652,7 @@ public class PredictionResource extends BaseResource {
         return motions;
     }
 
-    private Optional<OneDaysSensorData> getOneDaysSensorData(final long accountId,final DateTime dateOfEvening, final DateTime startTimeLocalUtc, final DateTime endTimeLocalUtc, boolean usePartnerFilter,boolean failIfNofeedback) {
+    private Optional<OneDaysSensorData> getOneDaysSensorData(final long accountId,final DateTime dateOfEvening, final DateTime startTimeLocalUtc, final DateTime endTimeLocalUtc, boolean usePartnerFilter,boolean failIfNofeedback,boolean useOutlierFilter) {
 
         LOGGER.info("Getting sensor data for account_id={},date={}",accountId,DateTimeUtil.dateToYmdString(dateOfEvening));
         final Optional<DeviceAccountPair> deviceIdPair = deviceDAO.getMostRecentSensePairByAccountId(accountId);
@@ -659,8 +671,14 @@ public class PredictionResource extends BaseResource {
         }
 
         /* Get "Pill" data  */
-        final List<TrackerMotion> myMotions = trackerMotionDAO.getBetweenLocalUTC(accountId, startTimeLocalUtc, endTimeLocalUtc);
-        final List<TrackerMotion> partnerMotions = getPartnerTrackerMotion(accountId, startTimeLocalUtc, endTimeLocalUtc);
+        List<TrackerMotion> myMotions = trackerMotionDAO.getBetweenLocalUTC(accountId, startTimeLocalUtc, endTimeLocalUtc);
+        List<TrackerMotion> partnerMotions = getPartnerTrackerMotion(accountId, startTimeLocalUtc, endTimeLocalUtc);
+
+        if (useOutlierFilter) {
+            myMotions = OutlierFilter.removeOutliers(myMotions,OUTLIER_GUARD_DURATION,DOMINANT_GROUP_DURATION);
+            partnerMotions = OutlierFilter.removeOutliers(partnerMotions,OUTLIER_GUARD_DURATION,DOMINANT_GROUP_DURATION);
+        }
+
 
         LOGGER.debug("Length of trackerMotion: {}, partnerTrackerMotion: {}", myMotions.size(),partnerMotions.size());
 
@@ -721,8 +739,8 @@ public class PredictionResource extends BaseResource {
             @DefaultValue(ALGORITHM_HIDDEN_MARKOV) @QueryParam("algorithm") final String algorithm,
             @DefaultValue("") @QueryParam("hmm_protobuf") final String protobuf,
             @DefaultValue("true") @QueryParam("partner_filter") final Boolean usePartnerFilter,
-            @DefaultValue("false") @QueryParam("force_learning") final Boolean forceLearning
-
+            @DefaultValue("false") @QueryParam("force_learning") final Boolean forceLearning,
+            @DefaultValue("false") @QueryParam("outlier_filter") final Boolean useOutlierFilter
     ) {
 
         /*  default return */
@@ -753,7 +771,7 @@ public class PredictionResource extends BaseResource {
 
 
 
-        final Optional<OneDaysSensorData> oneDaysSensorDataOptional = getOneDaysSensorData(accountId,dateOfNight,targetDate,endDate,usePartnerFilter,forceLearning);
+        final Optional<OneDaysSensorData> oneDaysSensorDataOptional = getOneDaysSensorData(accountId,dateOfNight,targetDate,endDate,usePartnerFilter,forceLearning,useOutlierFilter);
 
         if (!oneDaysSensorDataOptional.isPresent()) {
             throw new WebApplicationException(Response.status(Response.Status.NO_CONTENT)
