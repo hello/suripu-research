@@ -289,106 +289,6 @@ public class DataScienceResource extends BaseResource {
         return account.id;
     }
 
-    @GET
-    @Path("/feedback/{account_or_email}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public List<TimelineFeedback> getFeedbackFromUser(@Scope(OAuthScope.RESEARCH) final AccessToken accessToken,
-                                     @PathParam("account_or_email") final String accountOrEmail) {
-
-        //try accountID first
-        final Integer accountIdAsInt = Ints.tryParse(accountOrEmail);
-
-        Optional<Long> accountId = Optional.absent();
-
-        if (accountIdAsInt == null) {
-            accountId = getAccountIdByEmail(accountOrEmail);
-        }
-        else {
-            accountId = Optional.of(accountIdAsInt.longValue());
-        }
-
-
-        if (!accountId.isPresent()) {
-            LOGGER.debug("ID not found for account {}", accountOrEmail);
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
-
-        final List<TimelineFeedback> feedback = this.feedbackDAO.getForAccount(accountId.get());
-
-
-
-
-        return feedback;
-    }
-
-    @GET
-    @Path("/feedbackutc/{account_or_email}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public List<FeedbackUtc> getFeedbackFromUserUtc(@Scope(OAuthScope.RESEARCH) final AccessToken accessToken,
-                                                    @PathParam("account_or_email") final String accountOrEmail,
-                                                    @QueryParam("min_date") final String minDateStr) {
-
-        final Integer accountIdAsInt = Ints.tryParse(accountOrEmail);
-
-        Optional<Account> accountOptional = Optional.absent();
-
-        if (accountIdAsInt == null) {
-            final String email = accountOrEmail;
-            accountOptional = accountDAO.getByEmail(email);
-
-        }
-        else {
-            accountOptional = accountDAO.getById(accountIdAsInt.longValue());
-        }
-
-
-        if (!accountOptional.isPresent()) {
-            LOGGER.warn("account for {} not found", accountOrEmail);
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
-
-        final Account account = accountOptional.get();
-
-        if (!account.id.isPresent()) {
-            LOGGER.warn("account for {} had no id", accountOrEmail);
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
-
-        final List<TimelineFeedback> feedbacks = Lists.newArrayList();
-
-        DateTime startTime = null;
-
-        if (minDateStr != null) {
-            startTime = DateTimeUtil.ymdStringToDateTime(minDateStr);
-        }
-
-        if (startTime == null) {
-            feedbacks.addAll(this.feedbackDAO.getForAccount(account.id.get()));
-        }
-        else {
-            feedbacks.addAll(this.feedbackDAO.getForGreaterThanTimeForAccount(account.id.get(),startTime));
-        }
-
-
-        final List<FeedbackUtc> feedbackUtcs = Lists.newArrayList();
-
-        for (final TimelineFeedback timelineFeedback : feedbacks) {
-
-            final Optional<DateTime> oldTime = FeedbackUtils.convertFeedbackToDateTimeByOldTime(timelineFeedback, account.tzOffsetMillis);
-            final Optional<DateTime> newTime = FeedbackUtils.convertFeedbackToDateTimeByNewTime(timelineFeedback, account.tzOffsetMillis);
-
-            if (!oldTime.isPresent() || !newTime.isPresent()) {
-                continue;
-            }
-
-            feedbackUtcs.add(new FeedbackUtc(timelineFeedback.eventType.name(), oldTime.get().getMillis(), newTime.get().getMillis(), account.id.get(),DateTimeUtil.dateToYmdString(timelineFeedback.dateOfNight)));
-
-        }
-
-        return feedbackUtcs;
-    }
 
     @GET
     @Path("/timelinelog")
@@ -405,19 +305,6 @@ public class DataScienceResource extends BaseResource {
         return timelineLogDAO.getLogsForUserAndDay(accountId,startTs,Optional.of(numDays));
     }
 
-    @GET
-    @Path("/activeusers")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public ImmutableList<Long> getUserIdsFromTimelineLogByDateRange(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
-                                                           @QueryParam("from_ts_utc")final Long fromTimestamp,
-                                                           @DefaultValue("3") @QueryParam("num_days")final  Integer numDays
-    ) {
-        //day--should be something like 00:00 of evening of interest in UTC
-        final DateTime startTs = new DateTime(fromTimestamp, DateTimeZone.UTC);
-
-        return timelineLogDAO.getActiveUers(startTs,Optional.of(numDays));
-    }
 
 
     @GET
@@ -635,7 +522,9 @@ public class DataScienceResource extends BaseResource {
         for (int i = 0; i < numSamples; i++) {
             final Long timestamp = lightSamples.get(i).dateTime;
 
-            joinedSensorsMinuteData.add(new JoinedSensorsMinuteData(timestamp, accountId,
+            joinedSensorsMinuteData.add(new JoinedSensorsMinuteData(
+                    timestamp,
+                    accountId,
                     lightSamples.get(i).value,
                     sensorSamples.get(Sensor.SOUND_NUM_DISTURBANCES).get(i).value,
                     sensorSamples.get(Sensor.SOUND_PEAK_DISTURBANCE).get(i).value,
@@ -643,8 +532,9 @@ public class DataScienceResource extends BaseResource {
                     motionSamples.containsKey(timestamp) ? motionSamples.get(timestamp).kickOffCounts : null,
                     motionSamples.containsKey(timestamp) ? motionSamples.get(timestamp).motionRange : null,
                     motionSamples.containsKey(timestamp) ? motionSamples.get(timestamp).onDurationInSeconds : null,
-                    (int)waveCount.get(i).value,
-                    lightSamples.get(i).offsetMillis));
+                 //   (int)waveCount.get(i).value,
+                    lightSamples.get(i).offsetMillis)
+            );
         }
 
         return joinedSensorsMinuteData;

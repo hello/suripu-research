@@ -111,7 +111,6 @@ public class PredictionResource extends BaseResource {
     private final UserLabelDAO userLabelDAO;
     private final SleepHmmDAO sleepHmmDAO;
     private final FeedbackDAO feedbackDAO;
-    private final TimelineProcessor timelineProcessor;
     private final TimelineUtils timelineUtils;
     private final SenseColorDAO senseColorDAO;
     private final FeatureExtractionModelsDAO featureExtractionModelsDAO;
@@ -125,7 +124,6 @@ public class PredictionResource extends BaseResource {
                               final UserLabelDAO userLabelDAO,
                               final SleepHmmDAO sleepHmmDAO,
                               final FeedbackDAO feedbackDAO,
-                              final TimelineProcessor timelineProcessor,
                               final SenseColorDAO senseColorDAO,
                               final FeatureExtractionModelsDAO featureExtractionModelsDAO,
                               final OnlineHmmModelsDAO priorsDAO,
@@ -137,7 +135,6 @@ public class PredictionResource extends BaseResource {
         this.deviceDAO = deviceDAO;
         this.userLabelDAO = userLabelDAO;
         this.sleepHmmDAO = sleepHmmDAO;
-        this.timelineProcessor = timelineProcessor;
         this.timelineUtils = new TimelineUtils();
         this.feedbackDAO = feedbackDAO;
         this.senseColorDAO = senseColorDAO;
@@ -221,27 +218,6 @@ public class PredictionResource extends BaseResource {
 
     }
 
-    private List<Event> getSleepScoreEvents(final DateTime targetDate,
-                                            final AllSensorSampleList allSensorSampleList,
-                                            final List<TrackerMotion> myMotion) {
-
-
-        SleepEvents<Optional<Event>> sleepEventsFromAlgorithm = timelineProcessor.fromAlgorithm(targetDate, myMotion,
-                allSensorSampleList.get(Sensor.LIGHT),
-                allSensorSampleList.get(Sensor.WAVE_COUNT));
-
-        List<Optional<Event>> items = sleepEventsFromAlgorithm.toList();
-        List<Event> returnedEvents = new ArrayList<>();
-
-        for (Optional<Event> e : items) {
-            if (e.isPresent()) {
-                returnedEvents.add(e.get());
-            }
-        }
-
-        return returnedEvents;
-
-    }
 
 
     private List<Event> getVotingEvents(final AllSensorSampleList allSensorSampleList,
@@ -343,32 +319,6 @@ public class PredictionResource extends BaseResource {
         }
     }
 
-
-    @GET
-    @Path("/timeline/{account_id}/{query_date_local_utc}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public  ImmutableList<Timeline> getSleepPredictionByUser(  @Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
-
-                                                   @PathParam("account_id") final  Long accountId,
-
-                                                   @PathParam("query_date_local_utc") final String strTargetDate) {
-
-
-        final DateTime targetDate = DateTime.parse(strTargetDate, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
-                .withZone(DateTimeZone.UTC).withHourOfDay(20);
-        final DateTime endDate = targetDate.plusHours(16);
-
-
-        TimelineResult result = timelineProcessor.retrieveTimelinesFast(accountId, targetDate, Optional.<TimelineFeedback>absent());
-
-
-        if (result.timelines.isEmpty()) {
-            return ImmutableList.copyOf(Collections.EMPTY_LIST);
-        }
-
-        return result.timelines;
-    }
 
 
     public static class SensorData {
@@ -521,7 +471,7 @@ public class PredictionResource extends BaseResource {
         }
 
         //get feedback for this day
-        final ImmutableList<TimelineFeedback> feedbacks = feedbackDAO.getForNight(accountId, dateOfNight);
+        final ImmutableList<TimelineFeedback> feedbacks = feedbackDAO.getCorrectedForNight(accountId, dateOfNight);
 
         final List<FeedbackUtils.EventWithTime> feedbacksAsEvents = FeedbackUtils.getFeedbackEventsWithOriginalTime(feedbacks.asList(), tzOffset);
 
@@ -702,7 +652,7 @@ public class PredictionResource extends BaseResource {
 
 
         //get feedback for this day
-        final ImmutableList<TimelineFeedback> feedbacks = feedbackDAO.getForNight(accountId, dateOfEvening);
+        final ImmutableList<TimelineFeedback> feedbacks = feedbackDAO.getCorrectedForNight(accountId, dateOfEvening);
 
         if (feedbacks.isEmpty() && failIfNofeedback) {
             return Optional.absent();
@@ -740,13 +690,22 @@ public class PredictionResource extends BaseResource {
 
         final Optional<Device.Color> color = senseColorDAO.getColorForSense(deviceIdPair.get().externalDeviceId);
 
-
         allSensorSampleList = deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
                 startTimeLocalUtc.minusMillis(tzOffsetMillis).getMillis(),
                 endTimeLocalUtc.minusMillis(tzOffsetMillis).getMillis(),
                 accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE,color, Optional.<Calibration>absent());
 
-        return Optional.of(new OneDaysSensorData(allSensorSampleList,ImmutableList.copyOf(motions),ImmutableList.copyOf(partnerMotions),feedbacks,tzOffsetMillis));
+        return Optional.of(new OneDaysSensorData(
+                allSensorSampleList,
+                ImmutableList.copyOf(motions),
+                ImmutableList.copyOf(partnerMotions),
+                feedbacks,
+                dateOfEvening,
+                startTimeLocalUtc,
+                endTimeLocalUtc,
+                endTimeLocalUtc,
+                tzOffsetMillis));
+
 
     }
 
@@ -809,9 +768,6 @@ public class PredictionResource extends BaseResource {
         switch (algorithm) {
             case ALGORITHM_VOTING:
                 events = getVotingEvents(oneDaysSensorData.allSensorSampleList, oneDaysSensorData.trackerMotions);
-                break;
-            case ALGORITHM_SLEEP_SCORED:
-                events = getSleepScoreEvents(targetDate, oneDaysSensorData.allSensorSampleList, oneDaysSensorData.trackerMotions);
                 break;
 
             case ALGORITHM_HIDDEN_MARKOV:

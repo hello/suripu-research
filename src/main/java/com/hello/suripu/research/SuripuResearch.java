@@ -19,6 +19,7 @@ import com.hello.suripu.core.db.FeatureExtractionModelsDAO;
 import com.hello.suripu.core.db.FeatureExtractionModelsDAODynamoDB;
 import com.hello.suripu.core.db.OnlineHmmModelsDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAODynamoDB;
+import com.hello.suripu.core.db.UserTimelineTestGroupDAO;
 import com.hello.suripu.coredw.bundles.KinesisLoggerBundle;
 import com.hello.suripu.coredw.clients.AmazonDynamoDBClientFactory;
 import com.hello.suripu.core.configuration.KinesisLoggerConfiguration;
@@ -212,26 +213,7 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
                 deviceDataDAO, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
 
 
-
-
-        final TimelineProcessor timelineProcessor = TimelineProcessor.createTimelineProcessor(
-                trackerMotionDAO,
-                deviceDAO,
-                deviceDataDAO,
-                deviceDataDAODynamoDB,
-                ringTimeHistoryDAODynamoDB,
-                feedbackDAO,
-                sleepHmmDAODynamoDB,
-                accountDAO,
-                sleepStatsDAODynamoDB,
-                senseColorDAO,
-                priorsDAO,
-                featureExtractionDAO,
-                calibrationDAO,
-                defaultModelEnsembleDAO);
-
-
-        environment.addResource(new PredictionResource(accountDAO,trackerMotionDAO,deviceDataDAO,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,timelineProcessor,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO));
+        environment.addResource(new PredictionResource(accountDAO,trackerMotionDAO,deviceDataDAO,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO));
         environment.addResource(new AccountInfoResource(accountDAO, deviceDAO));
 
 
