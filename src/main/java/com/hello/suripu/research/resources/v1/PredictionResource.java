@@ -64,6 +64,7 @@ import com.hello.suripu.core.util.SoundUtils;
 import com.hello.suripu.core.util.TimelineError;
 import com.hello.suripu.core.util.TimelineUtils;
 import com.hello.suripu.core.util.TrackerMotionUtils;
+import com.hello.suripu.research.algtest.HardCodedNeuralNet;
 import com.hello.suripu.research.models.AlphabetsAndLabels;
 import com.hello.suripu.research.models.EventsWithLabels;
 import com.hello.suripu.research.models.FeedbackAsIndices;
@@ -106,6 +107,7 @@ public class PredictionResource extends BaseResource {
     private static final String ALGORITHM_VOTING = "voting";
     private static final String ALGORITHM_HIDDEN_MARKOV = "hmm";
     private static final String ALGORITHM_ONLINEHMM = "online";
+    private static final String ALGORITHM_NEURALNET = "net";
 
     private static final Integer MISSING_DATA_DEFAULT_VALUE = 0;
     private static final Integer SLOT_DURATION_MINUTES = 1;
@@ -805,6 +807,15 @@ public class PredictionResource extends BaseResource {
 
             case ALGORITHM_ONLINEHMM:
                 resultOptional = factory.get(AlgorithmType.ONLINE_HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
+                break;
+
+            case ALGORITHM_NEURALNET:
+                final Optional<HardCodedNeuralNet> hardCodedNeuralNet = HardCodedNeuralNet.create();
+                if (!hardCodedNeuralNet.isPresent()) {
+                    break;
+                }
+
+                hardCodedNeuralNet.get().evaluate(oneDaysSensorData);
                 break;
 
             default:

@@ -12,6 +12,9 @@
         <jodatime.version>20150319</jodatime.version>
         <dropwizard.version>0.6.2</dropwizard.version>
         <aws.sdk.version>1.9.37</aws.sdk.version>
+        <nd4j.version>0.4-rc3.9-SNAPSHOT</nd4j.version>
+        <canova.version>0.0.0.15-SNAPSHOT</canova.version>
+        <dl4j.version>0.4-rc3.9-SNAPSHOT</dl4j.version>
     </properties>
 
     <distributionManagement>
@@ -31,6 +34,13 @@
 
     <repositories>
         <repository>
+            <id>snapshots-repo</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+
+        <repository>
             <releases>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
@@ -40,7 +50,16 @@
             <name>Hello Releases</name>
             <url>s3://hello-maven/release</url>
         </repository>
+
+        <repository>
+            <id>project.local</id>
+            <name>project</name>
+            <url>file:${project.basedir}/../repo</url>
+        </repository>
+
     </repositories>
+
+
 
     <pluginRepositories>
         <pluginRepository>
@@ -122,6 +141,39 @@
             <artifactId>commons-codec</artifactId>
             <version>1.10</version>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.7</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-core</artifactId>
+            <version>${dl4j.version}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.nd4j</groupId>
+            <artifactId>nd4j-x86</artifactId>
+            <version>${nd4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>canova-nd4j-image</artifactId>
+            <groupId>org.nd4j</groupId>
+            <version>${canova.version}</version>
+        </dependency>
+
+        <dependency>
+            <artifactId>canova-nd4j-codec</artifactId>
+            <groupId>org.nd4j</groupId>
+            <version>${canova.version}</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>
