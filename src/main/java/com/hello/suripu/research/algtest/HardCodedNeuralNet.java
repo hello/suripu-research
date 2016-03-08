@@ -11,7 +11,12 @@ import com.hello.suripu.core.algorithmintegration.OneDaysSensorData;
 import com.hello.suripu.core.models.Sample;
 import com.hello.suripu.core.models.Sensor;
 import com.hello.suripu.core.models.TrackerMotion;
+import com.xeiam.xchart.Chart;
+import com.xeiam.xchart.QuickChart;
+import com.xeiam.xchart.SwingWrapper;
+import org.joda.time.DateTime;
 import org.joda.time.DateTimeConstants;
+import org.joda.time.DateTimeZone;
 
 import java.util.List;
 
@@ -51,13 +56,16 @@ public class HardCodedNeuralNet {
 // [5] my pill durations,
 // [6] partner pill duration
 
-    private static double [][] getSensorData(final OneDaysSensorData oneDaysSensorData) {
+    private static double [][] getSensorData(final OneDaysSensorData oneDaysSensorData) throws  Exception {
 
         final List<Sample> light = oneDaysSensorData.allSensorSampleList.get(Sensor.LIGHT);
         final List<Sample> soundcount = oneDaysSensorData.allSensorSampleList.get(Sensor.SOUND_NUM_DISTURBANCES);
         final List<Sample> soundvol = oneDaysSensorData.allSensorSampleList.get(Sensor.SOUND_PEAK_DISTURBANCE);
         final List<Sample> waves = oneDaysSensorData.allSensorSampleList.get(Sensor.WAVE_COUNT);
 
+        if (light.isEmpty()) {
+            throw new Exception("no data!");
+        }
         final long t0 = light.get(0).dateTime;
 
         final long tf = light.get(light.size()-1).dateTime;
@@ -69,6 +77,11 @@ public class HardCodedNeuralNet {
 
         for (final Sample s : light) {
             double value = Math.log(s.value + 1.0) / Math.log(2);
+
+            final DateTime time = new DateTime(s.dateTime, DateTimeZone.UTC);
+            if (time.getHourOfDay() >= 5 && time.getHourOfDay() < 20) {
+                continue;
+            }
 
             if (Double.isNaN(value) || value < 0.0) {
                 value = 0.0;
@@ -100,7 +113,12 @@ public class HardCodedNeuralNet {
 
         //sould volume
         for (final Sample s : soundvol) {
-            x[4][getIndex(t0,s.dateTime)] = 0.1 * s.value - 4.0;
+            double value = 0.1 * s.value - 4.0;
+
+            if (value < 0.0) {
+                value = 0.0;
+            }
+            x[4][getIndex(t0,s.dateTime)] = value;
         }
 
         for (final TrackerMotion m : oneDaysSensorData.originalTrackerMotions) {
@@ -115,13 +133,25 @@ public class HardCodedNeuralNet {
         return x;
     }
 
-    public void evaluate(final OneDaysSensorData oneDaysSensorData) {
+    public void evaluate(final OneDaysSensorData oneDaysSensorData) throws Exception {
         final NeuralNetEvaluator evaluator = NeuralNetEvaluator.createFromNet(data.net);
 
         final double [][] x = getSensorData(oneDaysSensorData);
 
         final double [][] output = evaluator.evaluate(x);
         final double [][] sleep = {output[1]};
+
+        final double [][] arr = new double[8][0];
+
+        for (int i = 0; i < 7; i++) {
+            arr[i + 1] = x[i];
+        }
+
+        arr[0] = output[1];
+
+        for (int t = 0; t < arr[0].length; t++) {
+            arr[0][t] *= 10.0;
+        }
 
 
         //segment this shit
@@ -132,6 +162,23 @@ public class HardCodedNeuralNet {
         final HiddenMarkovModelInterface hmm = HiddenMarkovModelFactory.create(HiddenMarkovModelFactory.HmmType.LOGMATH, 2, A, pi, obsModels, 0);
 
         final HmmDecodedResult res = hmm.decode(sleep,new Integer[]{1},1e-320);
+
+
+        // Create Chart
+        final String[] series = new String[8];
+        for (int i = 0; i < series.length; i++) {
+            series[i] = String.valueOf(i);
+        }
+
+        final double [] t = new double[x[0].length];
+
+        for (int i = 0; i < t.length; i++) {
+            t[i] = i;
+        }
+
+        final Chart chart = QuickChart.getChart("data", "index", "", series, t, arr);
+        final SwingWrapper sw = new SwingWrapper(chart);
+        sw.displayChart("foo");
 
         int foo = 3;
         foo++;

@@ -66,6 +66,9 @@ public class S3NeuralNet {
         } catch (IOException e) {
             LOGGER.error(e.getMessage());
         }
+        catch (Exception e) {
+            LOGGER.error(e.getMessage());
+        }
 
 
 
