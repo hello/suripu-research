@@ -112,7 +112,7 @@ public class PredictionResource extends BaseResource {
     private static final Integer MISSING_DATA_DEFAULT_VALUE = 0;
     private static final Integer SLOT_DURATION_MINUTES = 1;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DataScienceResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PredictionResource.class);
     private final AccountDAO accountDAO;
     private final TrackerMotionDAO trackerMotionDAO;
     private final DeviceDataDAO deviceDataDAO;

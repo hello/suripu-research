@@ -6,7 +6,6 @@ import com.hello.suripu.algorithm.hmm.HiddenMarkovModelFactory;
 import com.hello.suripu.algorithm.hmm.HiddenMarkovModelInterface;
 import com.hello.suripu.algorithm.hmm.HmmDecodedResult;
 import com.hello.suripu.algorithm.hmm.HmmPdfInterface;
-import com.hello.suripu.algorithm.hmm.PoissonPdf;
 import com.hello.suripu.core.algorithmintegration.OneDaysSensorData;
 import com.hello.suripu.core.models.Sample;
 import com.hello.suripu.core.models.Sensor;
@@ -17,6 +16,8 @@ import com.xeiam.xchart.SwingWrapper;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeConstants;
 import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -27,6 +28,8 @@ public class HardCodedNeuralNet {
 
     final static String NET_BUCKET = "hello-data/neuralnet";
     final static String NET_BASE_KEY = "2016-02-24T16:00:57.283Z";
+    private static final Logger LOGGER = LoggerFactory.getLogger(HardCodedNeuralNet.class);
+
     final private NeuralNetAndInfo data;
 
     static public Optional<HardCodedNeuralNet> create() {
@@ -176,10 +179,14 @@ public class HardCodedNeuralNet {
             t[i] = i;
         }
 
+        /*
         final Chart chart = QuickChart.getChart("data", "index", "", series, t, arr);
         final SwingWrapper sw = new SwingWrapper(chart);
         sw.displayChart("foo");
+        */
 
+
+        LOGGER.info("{}",output[1]);
         int foo = 3;
         foo++;
 
