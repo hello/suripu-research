@@ -186,10 +186,22 @@ public class HardCodedNeuralNet {
         */
 
 
-        LOGGER.info("{}",output[1]);
-        int foo = 3;
-        foo++;
+        if (res.bestPath.size() <= 1) {
+            LOGGER.error("path size <= 1");
+            return;
+        }
 
+        Integer prevState = res.bestPath.get(0);
+        for (int i = 1; i < res.bestPath.size(); i++) {
+            final Integer state = res.bestPath.get(i);
+
+            if (!state.equals(prevState)) {
+                LOGGER.info("{} ---> {} at idx={}",prevState,state,i);
+            }
+
+            prevState = state;
+
+        }
 
     }
 
