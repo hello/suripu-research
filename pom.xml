@@ -15,7 +15,6 @@
         <nd4j.version>0.4-rc3.8</nd4j.version>
         <dl4j.version>0.4-rc3.8</dl4j.version>
         <dl4j-local.version>0.4-rc3.9</dl4j-local.version>
-
         <canova.version>0.0.0.13</canova.version>
     </properties>
 
@@ -34,8 +33,15 @@
         </snapshotRepository>
     </distributionManagement>
 
-    <repositories>
 
+    <repositories>
+<!--
+        <repository>
+            <id>project.local</id>
+            <name>project</name>
+            <url>file:${project.basedir}/repo</url>
+        </repository>
+-->
         <repository>
             <releases>
                 <enabled>true</enabled>
@@ -45,12 +51,6 @@
             <id>s3.release</id>
             <name>Hello Releases</name>
             <url>s3://hello-maven/release</url>
-        </repository>
-
-        <repository>
-            <id>project.local</id>
-            <name>project</name>
-            <url>file:${project.basedir}/../repo</url>
         </repository>
 
     </repositories>
@@ -147,10 +147,12 @@
         </dependency>
 
         <dependency>
-
-        <groupId>org.deeplearning4j</groupId>
+            <groupId>org.deeplearning4j</groupId>
             <artifactId>deeplearning4j-core</artifactId>
             <version>${dl4j-local.version}</version>
+            <!--<scope>system</scope>
+            <systemPath>${project.basedir}/repo/org/deeplearning4j/deeplearning4j-core/0.4-rc3.8/deeplearning4j-core-0.4-rc3.8.jar</systemPath>
+            -->
         </dependency>
 
 
