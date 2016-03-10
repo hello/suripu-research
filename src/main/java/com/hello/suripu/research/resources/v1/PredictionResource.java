@@ -815,12 +815,10 @@ public class PredictionResource extends BaseResource {
                 }
 
                 try {
-                    hardCodedNeuralNet.get().evaluate(oneDaysSensorData);
+                    resultOptional = hardCodedNeuralNet.get().evaluate(oneDaysSensorData);
                 }
-                catch (Exception e )
-                {
-                    int foo = 3;
-                    foo++;
+                catch (Exception e ) {
+                    LOGGER.error(e.getMessage());
                 }
                 break;
 
