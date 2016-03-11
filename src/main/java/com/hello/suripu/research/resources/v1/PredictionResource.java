@@ -490,7 +490,7 @@ public class PredictionResource extends BaseResource {
         }
 
         //get feedback for this day
-        final ImmutableList<TimelineFeedback> feedbacks = feedbackDAO.getCorrectedForNight(accountId, dateOfNight);
+        final ImmutableList<TimelineFeedback> feedbacks = ImmutableList.copyOf(Lists.<TimelineFeedback>newArrayList());//feedbackDAO.getCorrectedForNight(accountId, dateOfNight);
 
         final List<FeedbackUtils.EventWithTime> feedbacksAsEvents = FeedbackUtils.getFeedbackEventsWithOriginalTime(feedbacks.asList(), tzOffset);
 
@@ -674,7 +674,7 @@ public class PredictionResource extends BaseResource {
 
 
         //get feedback for this day
-        final ImmutableList<TimelineFeedback> feedbacks = ImmutableList.copyOf(Lists.<TimelineFeedback>newArrayList());//feedbackDAO.getCorrectedForNight(accountId, dateOfEvening);
+        final ImmutableList<TimelineFeedback> feedbacks = feedbackDAO.getCorrectedForNight(accountId, dateOfEvening);
 
         if (feedbacks.isEmpty() && failIfNofeedback) {
             return Optional.absent();

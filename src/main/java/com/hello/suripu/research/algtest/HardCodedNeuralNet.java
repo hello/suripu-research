@@ -17,6 +17,7 @@ import com.hello.suripu.core.models.Sensor;
 import com.hello.suripu.core.models.SleepSegment;
 import com.hello.suripu.core.models.TrackerMotion;
 import com.hello.suripu.core.translations.English;
+
 /*
 import com.xeiam.xchart.Chart;
 import com.xeiam.xchart.QuickChart;
@@ -225,14 +226,14 @@ public class HardCodedNeuralNet {
 
         final HmmPdfInterface[] obsModels = {s0,s1,s2,s3,s4,s5,s6};
 
-        final double[][] Aall = new double[obsModels.length][obsModels.length];
-        Aall[0][0] = 0.99; Aall[0][1] = 0.01;
-        Aall[1][1] = 0.98; Aall[1][2] = 0.01; Aall[1][3] = 0.01;
-        Aall[2][2] = 0.98; Aall[2][3] = 0.01; Aall[2][4] = 0.01;
-        Aall[3][3] = 0.99;                    Aall[3][4] = 0.01;
-        Aall[4][4] = 0.99; Aall[4][5] = 0.01;                    Aall[4][6] = 0.01;
-        Aall[5][5] = 0.99; Aall[5][4] = 0.01;
-        Aall[6][6] = 1.0;
+        final double[][] A = new double[obsModels.length][obsModels.length];
+        A[0][0] = 0.99; A[0][1] = 0.01;
+        A[1][1] = 0.98; A[1][2] = 0.01; A[1][3] = 0.01;
+        A[2][2] = 0.98; A[2][3] = 0.01; A[2][4] = 0.01;
+        A[3][3] = 0.99; A[3][2] = 0.001;                A[3][4] = 0.01;
+        A[4][4] = 0.99; A[4][5] = 0.01;                                A[4][6] = 0.01;
+        A[5][5] = 0.99; A[5][4] = 0.01;
+        A[6][6] = 1.0;
 
 
 
@@ -240,11 +241,11 @@ public class HardCodedNeuralNet {
         pi[0] = 1.0;
 
         //segment this shit
-        final HiddenMarkovModelInterface hmm = HiddenMarkovModelFactory.create(HiddenMarkovModelFactory.HmmType.LOGMATH, obsModels.length, Aall, pi, obsModels, 0);
+        final HiddenMarkovModelInterface hmm = HiddenMarkovModelFactory.create(HiddenMarkovModelFactory.HmmType.LOGMATH, obsModels.length, A, pi, obsModels, 0);
 
         final HmmDecodedResult res = hmm.decode(sleepProbsWithDeltaProb,new Integer[]{obsModels.length - 1},1e-320);
 
-
+/*
         final double [][] arr = new double[2][0];
 
         final double [] path = new double[res.bestPath.size()];
@@ -268,7 +269,7 @@ public class HardCodedNeuralNet {
             t[i] = i;
         }
 
-/*
+
         final Chart chart = QuickChart.getChart("data", "index", "", series, t, arr);
         final SwingWrapper sw = new SwingWrapper(chart);
         sw.displayChart("foo");
@@ -288,13 +289,17 @@ public class HardCodedNeuralNet {
 */
 
         final List<Event> events = Lists.newArrayList();
-
+        boolean foundSleep = false;
         Integer prevState = res.bestPath.get(0);
         for (int i = 1; i < res.bestPath.size(); i++) {
             final Integer state = res.bestPath.get(i);
 
-            final long eventTime = i * DateTimeConstants.MILLIS_PER_MINUTE + t0;
-            if (state.equals(3) && !prevState.equals(3)) {
+            if (!state.equals(prevState)) {
+                LOGGER.info("FROM {} ---> {} at {}",prevState,state,i);
+            }
+
+                final long eventTime = i * DateTimeConstants.MILLIS_PER_MINUTE + t0;
+            if (state.equals(3) && !prevState.equals(3) && !foundSleep) {
                 LOGGER.info("SLEEP at idx={}, p={}",i,sleepMeas[0][i]);
 
                 events.add(Event.createFromType(Event.Type.SLEEP,
@@ -304,6 +309,8 @@ public class HardCodedNeuralNet {
                         Optional.of(English.FALL_ASLEEP_MESSAGE),
                         Optional.<SleepSegment.SoundInfo>absent(),
                         Optional.<Integer>absent()));
+
+                foundSleep = true;
 
             }
             else if (!state.equals(3) && prevState.equals(3)) {
@@ -317,6 +324,7 @@ public class HardCodedNeuralNet {
                         Optional.<SleepSegment.SoundInfo>absent(),
                         Optional.<Integer>absent()));
             }
+
 
             prevState = state;
 
