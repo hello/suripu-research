@@ -25,13 +25,14 @@ import com.xeiam.xchart.SeriesMarker;
 import com.xeiam.xchart.SwingWrapper;
 import org.apache.commons.lang3.ArrayUtils;
 */
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeConstants;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -204,65 +205,55 @@ public class HardCodedNeuralNet {
         }
 
 
-        final HmmPdfInterface[] obsModelsMain = {new BetaPdf(1.0,1.0,0),new BetaPdf(50.0,5.0,0),new BetaPdf(1.0,1.0,0)};
-        final HmmPdfInterface[] obsModelsDiff = {new GaussianPdf(-0.02,0.02,1),new GaussianPdf(0.00,0.004,1),new GaussianPdf(0.02,0.02,1)};
+        final double [][] sleepProbsWithDeltaProb = {output[1],dsleep};
 
-        /*
+
+
+        final HmmPdfInterface[] obsModelsMain = {new BetaPdf(2.0,10.0,0),new BetaPdf(6.0,6.0,0),new BetaPdf(10.0,2.0,0)};
+        final HmmPdfInterface[] obsModelsDiff = {new GaussianPdf(-0.02,0.02,1),new GaussianPdf(0.00,0.02,1),new GaussianPdf(0.02,0.02,1)};
+
+
         //iterate through all possible combinations
-        final HmmPdfInterface s0 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[0]).withPdf(obsModelsDiff[0]).build();
-        final HmmPdfInterface s1 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[0]).withPdf(obsModelsDiff[1]).build();
-        final HmmPdfInterface s2 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[0]).withPdf(obsModelsDiff[2]).build();
-        final HmmPdfInterface s3 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[1]).withPdf(obsModelsDiff[0]).build();
-        final HmmPdfInterface s4 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[1]).withPdf(obsModelsDiff[1]).build();
-        final HmmPdfInterface s5 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[1]).withPdf(obsModelsDiff[2]).build();
-        final HmmPdfInterface s6 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[2]).withPdf(obsModelsDiff[0]).build();
-        final HmmPdfInterface s7 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[2]).withPdf(obsModelsDiff[1]).build();
-        final HmmPdfInterface s8 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[2]).withPdf(obsModelsDiff[2]).build();
+        final HmmPdfInterface s0 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[0]).withPdf(obsModelsDiff[1]).build(); //low
+        final HmmPdfInterface s1 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[1]).withPdf(obsModelsDiff[2]).build();
+        final HmmPdfInterface s2 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[1]).withPdf(obsModelsDiff[1]).build();
+        final HmmPdfInterface s3 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[2]).withPdf(obsModelsDiff[1]).build();
+        final HmmPdfInterface s4 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[1]).withPdf(obsModelsDiff[0]).build();
+        final HmmPdfInterface s5 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[1]).withPdf(obsModelsDiff[1]).build();
+        final HmmPdfInterface s6 = PdfCompositeBuilder.newBuilder().withPdf(obsModelsMain[0]).withPdf(obsModelsDiff[1]).build();
 
-        final HmmPdfInterface[] obsModel = {s0,s1,s2,s3,s4,s5,s6,s7,s8};
 
-        final double[][] Aall = {
-                {0.99, 0.01,0.00},
-                {0.00, 0.9999,0.0001},
-                {0.00,0.00,1.0}};
-        */
+        final HmmPdfInterface[] obsModels = {s0,s1,s2,s3,s4,s5,s6};
+
+        final double[][] Aall = new double[obsModels.length][obsModels.length];
+        Aall[0][0] = 0.99; Aall[0][1] = 0.01;
+        Aall[1][1] = 0.98; Aall[1][2] = 0.01; Aall[1][3] = 0.01;
+        Aall[2][2] = 0.98; Aall[2][3] = 0.01; Aall[2][4] = 0.01;
+        Aall[3][3] = 0.99;                    Aall[3][4] = 0.01;
+        Aall[4][4] = 0.99; Aall[4][5] = 0.01;                    Aall[4][6] = 0.01;
+        Aall[5][5] = 0.99; Aall[5][4] = 0.01;
+        Aall[6][6] = 1.0;
+
+
+
+        final double[] pi = new double [obsModels.length];
+        pi[0] = 1.0;
+
         //segment this shit
-        final double[][] A = {
-                {0.99, 0.01,0.00},
-                {0.00, 0.99,0.01},
-                {0.00,0.00,1.0}};
-        final double[] pi = {1.0, 0.000,0.000};
+        final HiddenMarkovModelInterface hmm = HiddenMarkovModelFactory.create(HiddenMarkovModelFactory.HmmType.LOGMATH, obsModels.length, Aall, pi, obsModels, 0);
 
-        final HiddenMarkovModelInterface hmm = HiddenMarkovModelFactory.create(HiddenMarkovModelFactory.HmmType.LOGMATH, 3, A, pi, obsModelsMain, 0);
-
-        final HmmDecodedResult res = hmm.decode(sleepMeas,new Integer[]{2},1e-320);
+        final HmmDecodedResult res = hmm.decode(sleepProbsWithDeltaProb,new Integer[]{obsModels.length - 1},1e-320);
 
 
-        /*
-        final double [][] A2 = {{0.99,0.01,0.00},{0.01,0.99,0.01},{0.00,0.01,0.99}};
-        final double[] pi2 = {0.00, 1.000,0.000};
-        final HiddenMarkovModelInterface hmm2 = HiddenMarkovModelFactory.create(HiddenMarkovModelFactory.HmmType.LOGMATH, 3, A2, pi2, obsModels2, 0);
-        final HmmDecodedResult res2 = hmm2.decode(new double[][] {dsleep},new Integer[]{0,1,2},1e-320);
+        final double [][] arr = new double[2][0];
 
-
-        double [] p2 = new double[res2.bestPath.size()];
-        for (int i = 0; i < p2.length; i++) {
-            p2[i] = (double)res2.bestPath.get(i);
-        }
-
-*/
-        /*
-        final double [][] arr = new double[8][0];
-
-        for (int i = 0; i < 7; i++) {
-            arr[i + 1] = x[i];
+        final double [] path = new double[res.bestPath.size()];
+        for (int i = 0; i < res.bestPath.size(); i++) {
+            path[i] = res.bestPath.get(i);
         }
 
         arr[0] = output[1].clone();
-
-        for (int t = 0; t < arr[0].length; t++) {
-            arr[0][t] *= 10.0;
-        }
+        arr[1] = path;
 
 
         // Create Chart
@@ -277,23 +268,10 @@ public class HardCodedNeuralNet {
             t[i] = i;
         }
 
-
+/*
         final Chart chart = QuickChart.getChart("data", "index", "", series, t, arr);
         final SwingWrapper sw = new SwingWrapper(chart);
         sw.displayChart("foo");
-*/
-
-        /*
-        final Chart chart2 = QuickChart.getChart("probs", "index", "", new String []{"p", "dp"}, t, new double [][]{sleep,dsleep});
-        final SwingWrapper sw2 = new SwingWrapper(chart2);
-        sw2.displayChart("probs");
-*/
-        /*
-        final Chart chart2 = QuickChart.getChart("probs", "index", "", "pdp", dsleep, sleep);
-        final SwingWrapper sw2 = new SwingWrapper(chart2);
-        chart2.getSeriesMap().get("pdp").setMarker(SeriesMarker.TRIANGLE_UP);
-        chart2.getSeriesMap().get("pdp").setLineStyle(SeriesLineStyle.NONE);
-        sw2.displayChart("probs");
 */
 
 
@@ -301,6 +279,13 @@ public class HardCodedNeuralNet {
             LOGGER.error("path size <= 1");
             return Optional.absent();
         }
+/*
+        float [] f = new float[sleep.length];
+        for (int i = 0; i < sleep.length; i++) {
+            f[i] = (float)sleep[i];
+        }
+        LOGGER.info("\n{}\n{}",f,res.bestPath);
+*/
 
         final List<Event> events = Lists.newArrayList();
 
@@ -309,7 +294,7 @@ public class HardCodedNeuralNet {
             final Integer state = res.bestPath.get(i);
 
             final long eventTime = i * DateTimeConstants.MILLIS_PER_MINUTE + t0;
-            if (state.equals(1) && prevState.equals(0)) {
+            if (state.equals(3) && !prevState.equals(3)) {
                 LOGGER.info("SLEEP at idx={}, p={}",i,sleepMeas[0][i]);
 
                 events.add(Event.createFromType(Event.Type.SLEEP,
@@ -321,7 +306,7 @@ public class HardCodedNeuralNet {
                         Optional.<Integer>absent()));
 
             }
-            else if (state.equals(2) && prevState.equals(1)) {
+            else if (!state.equals(3) && prevState.equals(3)) {
                 LOGGER.info("WAKE at idx={}, p={}",i,sleepMeas[0][i]);
 
                 events.add(Event.createFromType(Event.Type.WAKE_UP,

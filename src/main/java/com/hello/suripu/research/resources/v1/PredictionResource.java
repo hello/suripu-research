@@ -125,6 +125,7 @@ public class PredictionResource extends BaseResource {
     private final FeatureExtractionModelsDAO featureExtractionModelsDAO;
     private final OnlineHmmModelsDAO priorsDAO;
     private final DefaultModelEnsembleDAO defaultModelEnsembleDAO;
+    private final Optional<HardCodedNeuralNet> net;
 
     public PredictionResource(final AccountDAO accountDAO,
                               final TrackerMotionDAO trackerMotionDAO,
@@ -150,6 +151,8 @@ public class PredictionResource extends BaseResource {
         this.featureExtractionModelsDAO = featureExtractionModelsDAO;
         this.priorsDAO = priorsDAO;
         this.defaultModelEnsembleDAO = defaultModelEnsembleDAO;
+        this.net = HardCodedNeuralNet.create();
+
     }
 
 
@@ -809,13 +812,12 @@ public class PredictionResource extends BaseResource {
                 break;
 
             case ALGORITHM_NEURALNET:
-                final Optional<HardCodedNeuralNet> hardCodedNeuralNet = HardCodedNeuralNet.create();
-                if (!hardCodedNeuralNet.isPresent()) {
+                if (!net.isPresent()) {
                     break;
                 }
 
                 try {
-                    resultOptional = hardCodedNeuralNet.get().evaluate(oneDaysSensorData);
+                    resultOptional = net.get().evaluate(oneDaysSensorData);
                 }
                 catch (Exception e ) {
                     LOGGER.error(e.getMessage());
