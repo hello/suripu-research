@@ -136,15 +136,6 @@ logging:
     # The timezone used to format dates. HINT: USE THE DEFAULT, UTC.
     timeZone: UTC
 
-kinesis:
-  endpoint : https://kinesis.us-east-1.amazonaws.com
-  streams :
-    audio_features : audio_features
-    activity_stream : activity_stream
-    registrations: registrations
-    encode_audio : encode_audio
-    batch_pill_data : batch_pill_data
-    sense_sensors_data : sense_sensors_data
 
 features_db:
     endpoint : http://dynamodb.us-east-1.amazonaws.com

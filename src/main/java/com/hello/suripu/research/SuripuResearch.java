@@ -9,6 +9,7 @@ import com.amazonaws.services.kinesis.AmazonKinesisAsyncClient;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.hello.suripu.core.ObjectGraphRoot;
 import com.hello.suripu.core.db.CalibrationDAO;
 import com.hello.suripu.core.db.CalibrationDynamoDB;
@@ -19,10 +20,9 @@ import com.hello.suripu.core.db.FeatureExtractionModelsDAO;
 import com.hello.suripu.core.db.FeatureExtractionModelsDAODynamoDB;
 import com.hello.suripu.core.db.OnlineHmmModelsDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAODynamoDB;
-import com.hello.suripu.core.db.UserTimelineTestGroupDAO;
-import com.hello.suripu.coredw.bundles.KinesisLoggerBundle;
+import com.hello.suripu.core.logging.DataLoggerBatchPayload;
+import com.hello.suripu.core.logging.KinesisBatchPutResult;
 import com.hello.suripu.coredw.clients.AmazonDynamoDBClientFactory;
-import com.hello.suripu.core.configuration.KinesisLoggerConfiguration;
 import com.hello.suripu.core.configuration.QueueName;
 import com.hello.suripu.core.db.AccessTokenDAO;
 import com.hello.suripu.core.db.AccountDAO;
@@ -44,16 +44,11 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
-import com.hello.suripu.core.filters.CacheFilterFactory;
 import com.hello.suripu.core.logging.DataLogger;
-import com.hello.suripu.core.logging.KinesisLoggerFactory;
 import com.hello.suripu.coredw.oauth.OAuthAuthenticator;
 import com.hello.suripu.coredw.oauth.OAuthProvider;
 import com.hello.suripu.core.oauth.stores.PersistentAccessTokenStore;
 import com.hello.suripu.core.oauth.stores.PersistentApplicationStore;
-import com.hello.suripu.core.processors.TimelineProcessor;
-import com.hello.suripu.core.util.CustomJSONExceptionMapper;
-import com.hello.suripu.core.util.DropwizardServiceUtil;
 import com.hello.suripu.research.configuration.SuripuResearchConfiguration;
 import com.hello.suripu.research.db.LabelDAO;
 import com.hello.suripu.research.db.LabelDAOImpl;
@@ -74,6 +69,7 @@ import org.skife.jdbi.v2.DBI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.TimeZone;
 
 /**
@@ -90,12 +86,7 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
     @Override
     public void initialize(final Bootstrap<SuripuResearchConfiguration> bootstrap) {
         bootstrap.addBundle(new DBIExceptionsBundle());
-        bootstrap.addBundle(new KinesisLoggerBundle<SuripuResearchConfiguration>() {
-            @Override
-            public KinesisLoggerConfiguration getConfiguration(final SuripuResearchConfiguration configuration) {
-                return configuration.getKinesisLoggerConfiguration();
-            }
-        });
+
     }
 
     @Override
@@ -149,10 +140,6 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
         final AmazonS3 amazonS3 = new AmazonS3Client(awsCredentialsProvider, clientConfiguration);
 
 
-        final ImmutableMap<QueueName, String> streams = ImmutableMap.copyOf(configuration.getKinesisConfiguration().getStreams());
-        final KinesisLoggerFactory kinesisLoggerFactory = new KinesisLoggerFactory(kinesisClient, streams);
-        final DataLogger activityLogger = kinesisLoggerFactory.get(QueueName.ACTIVITY_STREAM);
-
         final AmazonDynamoDBClientFactory featureStoreDynamoDBClientFactory = AmazonDynamoDBClientFactory.create(awsCredentialsProvider);
         final AmazonDynamoDB featureDynamoDB = featureStoreDynamoDBClientFactory.getForEndpoint(configuration.getFeaturesDynamoDBConfiguration().getEndpoint());
         final String featureNamespace = (configuration.getDebug()) ? "dev" : "prod";
@@ -203,12 +190,31 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
         LOGGER.warn("DEBUG MODE = {}", configuration.getDebug());
         // Custom JSON handling for responses.
         final ResourceConfig jrConfig = environment.getJerseyResourceConfig();
-        DropwizardServiceUtil.deregisterDWSingletons(jrConfig);
-        environment.addProvider(new CustomJSONExceptionMapper(configuration.getDebug()));
-        environment.addProvider(new OAuthProvider(new OAuthAuthenticator(accessTokenStore), "protected-resources", activityLogger));
 
-        environment.getJerseyResourceConfig()
-                .getResourceFilterFactories().add(CacheFilterFactory.class);
+        DataLogger emptyDataLogger = new DataLogger() {
+            @Override
+            public void putAsync(String s, byte[] bytes) {
+
+            }
+
+            @Override
+            public String put(String s, byte[] bytes) {
+                return "foobars";
+            }
+
+            @Override
+            public String putWithSequenceNumber(String s, byte[] bytes, String s1) {
+                return "foobars";
+            }
+
+            @Override
+            public KinesisBatchPutResult putRecords(List<DataLoggerBatchPayload> list) {
+                return new KinesisBatchPutResult(0,0, Lists.<Boolean>newArrayList());
+            }
+        };
+
+        environment.addProvider(new OAuthProvider(new OAuthAuthenticator(accessTokenStore), "protected-resources", emptyDataLogger));
+
         environment.addResource(new DataScienceResource(accountDAO, trackerMotionDAO,
                 deviceDataDAO, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
 

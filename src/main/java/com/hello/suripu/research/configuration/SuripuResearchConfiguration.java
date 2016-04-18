@@ -2,8 +2,6 @@ package com.hello.suripu.research.configuration;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hello.suripu.coredw.configuration.DynamoDBConfiguration;
-import com.hello.suripu.core.configuration.KinesisConfiguration;
-import com.hello.suripu.core.configuration.KinesisLoggerConfiguration;
 import com.hello.suripu.coredw.configuration.S3BucketConfiguration;
 import com.yammer.dropwizard.config.Configuration;
 import com.yammer.dropwizard.db.DatabaseConfiguration;
@@ -46,17 +44,8 @@ public class SuripuResearchConfiguration extends Configuration {
     @Valid
     @JsonProperty("debug")
     private Boolean debug = Boolean.FALSE;
-
     public Boolean getDebug() {
         return debug;
-    }
-
-    @Valid
-    @NotNull
-    @JsonProperty("kinesis")
-    private KinesisConfiguration kinesisConfiguration;
-    public KinesisConfiguration getKinesisConfiguration() {
-        return kinesisConfiguration;
     }
 
 
@@ -68,14 +57,6 @@ public class SuripuResearchConfiguration extends Configuration {
         return this.featuresDynamoDBConfiguration;
     }
 
-    @Valid
-    @NotNull
-    @JsonProperty("kinesis_logger")
-    private KinesisLoggerConfiguration kinesisLoggerConfiguration;
-
-    public KinesisLoggerConfiguration getKinesisLoggerConfiguration() {
-        return kinesisLoggerConfiguration;
-    }
 
     @Valid
     @NotNull

@@ -33,7 +33,7 @@ import com.hello.suripu.core.models.TrackerMotion;
 import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
 import com.hello.suripu.core.oauth.Scope;
-import com.hello.suripu.core.resources.BaseResource;
+import com.hello.suripu.coredw.resources.BaseResource;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.core.util.FeedbackUtils;
 import com.hello.suripu.core.util.JsonError;
@@ -225,7 +225,8 @@ public class DataScienceResource extends BaseResource {
                     slotDurationMins,
                     missingDataDefaultValue(accountId.get()),
                     Optional.<Device.Color>absent(),
-                    Optional.of(Calibration.createDefault("dummy-sense"))
+                    Optional.of(Calibration.createDefault("dummy-sense")),
+                            true
                 );
             final List<Sample> lightData = sensorData.get(Sensor.LIGHT);
             final TimelineUtils timelineUtils = new TimelineUtils();
@@ -265,7 +266,8 @@ public class DataScienceResource extends BaseResource {
                     slotDurationMins,
                     missingDataDefaultValue(accountId.get()),
                     Optional.<Device.Color>absent(),
-                    Optional.of(Calibration.createDefault("dummy-sense"))
+                    Optional.of(Calibration.createDefault("dummy-sense")),
+                    true
             );
             final List<Sample> data = sensorData.get(Sensor.valueOf(dataType));
             return data;
@@ -510,7 +512,8 @@ public class DataScienceResource extends BaseResource {
                 slotDurationInMinutes,
                 missingDataDefaultValue,
                 Optional.<Device.Color>absent(),
-                Optional.of(Calibration.createDefault("dummy-sense"))
+                Optional.of(Calibration.createDefault("dummy-sense")),
+                true
         );
 
         final List<Sample> lightSamples = sensorSamples.get(Sensor.LIGHT);
@@ -678,7 +681,8 @@ public class DataScienceResource extends BaseResource {
                 slotDurationInMinutes,
                 missingDataDefaultValue,
                 color,
-                Optional.<Calibration>absent()
+                Optional.<Calibration>absent(),
+                true
         );
 
         final long startTimeUTC = startTs.getMillis() - timezoneOffset;

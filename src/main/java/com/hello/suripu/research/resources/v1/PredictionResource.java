@@ -12,6 +12,8 @@ import com.hello.suripu.algorithm.sleep.SleepEvents;
 import com.hello.suripu.algorithm.sleep.Vote;
 import com.hello.suripu.api.datascience.SleepHmmProtos;
 import com.hello.suripu.core.algorithmintegration.AlgorithmFactory;
+import com.hello.suripu.core.algorithmintegration.NeuralNetAlgorithmOutput;
+import com.hello.suripu.core.algorithmintegration.NeuralNetEndpoint;
 import com.hello.suripu.core.algorithmintegration.OneDaysSensorData;
 import com.hello.suripu.core.algorithmintegration.OnlineHmm;
 import com.hello.suripu.core.algorithmintegration.OnlineHmmSensorDataBinning;
@@ -50,7 +52,7 @@ import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
 import com.hello.suripu.core.oauth.Scope;
 import com.hello.suripu.core.processors.TimelineProcessor;
-import com.hello.suripu.core.resources.BaseResource;
+import com.hello.suripu.coredw.resources.BaseResource;
 import com.hello.suripu.core.util.AlgorithmType;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.core.util.FeatureExtractionModelData;
@@ -402,7 +404,7 @@ public class PredictionResource extends BaseResource {
         sensorData = deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
                 targetDate.minusMillis(tzOffsetMillis).getMillis(),
                 endDate.minusMillis(tzOffsetMillis).getMillis(),
-                accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE, color, Optional.<Calibration>absent());
+                accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE, color, Optional.<Calibration>absent(),true);
 
 
         return new SensorData(sensorData,myMotions,partnerMotions,motions);
@@ -716,7 +718,7 @@ public class PredictionResource extends BaseResource {
         allSensorSampleList = deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
                 startTimeLocalUtc.minusMillis(tzOffsetMillis).getMillis(),
                 endTimeLocalUtc.minusMillis(tzOffsetMillis).getMillis(),
-                accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE,color, Optional.<Calibration>absent());
+                accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE,color, Optional.<Calibration>absent(),true);
 
         return Optional.of(new OneDaysSensorData(
                 allSensorSampleList,
@@ -787,8 +789,14 @@ public class PredictionResource extends BaseResource {
 
 
          /*  pull out algorithm type */
+        final NeuralNetEndpoint temporaryEmptyEndpoint = new NeuralNetEndpoint() {
+            @Override
+            public Optional<NeuralNetAlgorithmOutput> getNetOutput(String s, double[][] doubles) {
+                return Optional.absent();
+            }
+        };
 
-        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO,priorsDAO,defaultModelEnsembleDAO,featureExtractionModelsDAO,Optional.<UUID>absent());
+        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO,priorsDAO,defaultModelEnsembleDAO,featureExtractionModelsDAO,temporaryEmptyEndpoint,Optional.<UUID>absent());
 
         final TimelineLog timelineLog = new TimelineLog(accountId,dateOfNight.getMillis());
 
