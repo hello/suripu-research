@@ -50,10 +50,13 @@ import com.hello.suripu.coredw.oauth.OAuthProvider;
 import com.hello.suripu.core.oauth.stores.PersistentAccessTokenStore;
 import com.hello.suripu.core.oauth.stores.PersistentApplicationStore;
 import com.hello.suripu.research.configuration.SuripuResearchConfiguration;
+import com.hello.suripu.research.db.BatchSenseDataDAO;
+import com.hello.suripu.research.db.BatchSensorDataDAOImpl;
 import com.hello.suripu.research.db.LabelDAO;
 import com.hello.suripu.research.db.LabelDAOImpl;
 import com.hello.suripu.research.modules.RolloutResearchModule;
 import com.hello.suripu.research.resources.v1.AccountInfoResource;
+import com.hello.suripu.research.resources.v1.BatchPredictionResource;
 import com.hello.suripu.research.resources.v1.DataScienceResource;
 import com.hello.suripu.research.resources.v1.PredictionResource;
 import com.sun.jersey.api.core.ResourceConfig;
@@ -123,6 +126,7 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
         final AccessTokenDAO accessTokenDAO = commonDB.onDemand(AccessTokenDAO.class);
         final FeedbackDAO feedbackDAO = commonDB.onDemand(FeedbackDAO.class);
         final SenseColorDAO senseColorDAO = commonDB.onDemand(SenseColorDAOSQLImpl.class);
+        final BatchSenseDataDAO batchSenseDataDAO = sensorsDB.onDemand(BatchSensorDataDAOImpl.class);
         // TODO: create research DB DAOs here
 
         final PersistentApplicationStore applicationStore = new PersistentApplicationStore(applicationsDAO);
@@ -221,6 +225,7 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
 
         environment.addResource(new PredictionResource(accountDAO,trackerMotionDAO,deviceDataDAO,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO));
         environment.addResource(new AccountInfoResource(accountDAO, deviceDAO));
+        environment.addResource(new BatchPredictionResource(batchSenseDataDAO,senseColorDAO));
 
 
     }
