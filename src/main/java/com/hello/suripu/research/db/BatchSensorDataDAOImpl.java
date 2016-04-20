@@ -30,24 +30,19 @@ import java.util.Map;
 @RegisterMapper(SimpleDeviceDataMapper.class)
 public abstract class BatchSensorDataDAOImpl implements BatchSenseDataDAO {
 
-    /*
-    @QueryTimeOut(10000)
-    @SqlQuery("SELECT COUNT(1) FROM device_sensors_master")
-    @RegisterMapper(LongMapper.class)
-    public abstract List<Long> testConnection();
-*/
-
+/*
     @SqlQuery("SELECT account_id, ts, offset_millis, ambient_light, wave_count, audio_num_disturbances, audio_peak_disturbances_db, audio_peak_energy_db FROM device_sensors_master " +
             "WHERE local_utc_ts >= \'2016-02-02 00:00:00\' AND local_utc_ts <= \'2016-02-02 01:00:00\' AND account_id IN (1002,1012) ORDER BY account_id,ts ASC")
     public abstract List<DeviceData> getSensorDataForAccountsByLocalTime(@Bind("start_ts") final DateTime startDate, @Bind("end_ts") final DateTime endDate, @Bind("account_list") final String accounts);
+*/
 
-
-    @SqlQuery("SELECT * FROM device_sensors_master " +
+    @SqlQuery("SELECT account_id, ts, offset_millis, ambient_light, wave_count, audio_num_disturbances, audio_peak_disturbances_db, audio_peak_energy_db " +
+            "FROM device_sensors_master " +
             "WHERE local_utc_ts >= :start_ts " +
             "AND local_utc_ts <= :end_ts " +
             "AND account_id IN (:accounts) " +
             "ORDER BY account_id,ts ASC")
-    public abstract List<DeviceData> getSensorDataForAccountsByLocalTime3(@Bind("start_ts") final DateTime startDate,@Bind("end_ts") final DateTime endDate,@Bind("accounts") final String accounts);
+    public abstract List<DeviceData> getSensorDataForAccountsByLocalTime(@Bind("start_ts") final DateTime startDate,@Bind("end_ts") final DateTime endDate,@Bind("accounts") final String accounts);
 
     final private static int SLOT_DURATION_MINUTES = 1;
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(BatchSensorDataDAOImpl.class);
@@ -101,7 +96,7 @@ public abstract class BatchSensorDataDAOImpl implements BatchSenseDataDAO {
 
             LOGGER.info("running query between {} and {} for {} accounts",startTimeInclusive,endTimeInclusive,accounts.size());
 
-            final List<DeviceData> sensorData = getSensorDataForAccountsByLocalTime3(startTimeInclusive, startTimeInclusive.plusHours(1), accountsStr);
+            final List<DeviceData> sensorData = getSensorDataForAccountsByLocalTime(startTimeInclusive, startTimeInclusive.plusHours(1), accountsStr);
 
             LOGGER.info("got {} rows",sensorData.size());
 

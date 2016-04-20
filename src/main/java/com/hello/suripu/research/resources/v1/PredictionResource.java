@@ -44,6 +44,7 @@ import com.hello.suripu.core.models.OnlineHmmData;
 import com.hello.suripu.core.models.OnlineHmmModelParams;
 import com.hello.suripu.core.models.OnlineHmmPriors;
 import com.hello.suripu.core.models.OnlineHmmScratchPad;
+import com.hello.suripu.core.models.Sample;
 import com.hello.suripu.core.models.Sensor;
 import com.hello.suripu.core.models.Timeline;
 import com.hello.suripu.core.models.TimelineFeedback;
@@ -93,6 +94,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -201,7 +203,7 @@ public class PredictionResource extends BaseResource {
         return ImmutableList.copyOf(Collections.EMPTY_LIST);
 
     }
-    
+
     /*  Get sleep/wake events from the hidden markov model  */
     private ImmutableList<Event> getHmmEvents(final DateTime targetDate, final DateTime endDate,final long  currentTimeMillis,final long accountId,
                                      final AllSensorSampleList allSensorSampleList, final List<TrackerMotion> myMotion,final SleepHmmDAO hmmDAO) {
@@ -725,6 +727,17 @@ public class PredictionResource extends BaseResource {
                 endTimeLocalUtc.minusMillis(tzOffsetMillis).getMillis(),
                 accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE,color, Optional.<Calibration>absent(),true);
 
+
+        List<Sample> light = allSensorSampleList.get(Sensor.LIGHT);
+
+        if (light.isEmpty()) {
+            return Optional.absent();
+        }
+
+        final int lastOffset = light.get(light.size()-1).offsetMillis;
+
+
+
         return Optional.of(new OneDaysSensorData(
                 allSensorSampleList,
                 ImmutableList.copyOf(motions),
@@ -733,7 +746,7 @@ public class PredictionResource extends BaseResource {
                 dateOfEvening,
                 startTimeLocalUtc,
                 endTimeLocalUtc,
-                endTimeLocalUtc,
+                endTimeLocalUtc.minus(lastOffset),
                 tzOffsetMillis));
 
 
@@ -770,20 +783,17 @@ public class PredictionResource extends BaseResource {
 
 
         /*  Time stuff */
-        final long  currentTimeMillis = DateTime.now().withZone(DateTimeZone.UTC).getMillis();
-
         final DateTime dateOfNight = DateTime.parse(strTargetDate, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
                 .withZone(DateTimeZone.UTC).withHourOfDay(0);
-        final DateTime targetDate = DateTime.parse(strTargetDate, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
-                .withZone(DateTimeZone.UTC).withHourOfDay(20);
-        final DateTime endDate = targetDate.plusHours(16);
+        final DateTime startTimeLocalUtc = dateOfNight.withHourOfDay(20);
+        final DateTime endTimeLocalUtc = startTimeLocalUtc.plusHours(16);
 
-        LOGGER.debug("Target date: {}", targetDate);
-        LOGGER.debug("End date: {}", endDate);
-
+        LOGGER.debug("Target date: {}", startTimeLocalUtc);
+        LOGGER.debug("End date: {}", endTimeLocalUtc);
 
 
-        final Optional<OneDaysSensorData> oneDaysSensorDataOptional = getOneDaysSensorData(accountId,dateOfNight,targetDate,endDate,usePartnerFilter,forceLearning,useOutlierFilter);
+
+        final Optional<OneDaysSensorData> oneDaysSensorDataOptional = getOneDaysSensorData(accountId,dateOfNight,startTimeLocalUtc,endTimeLocalUtc,usePartnerFilter,forceLearning,useOutlierFilter);
 
         if (!oneDaysSensorDataOptional.isPresent()) {
             throw new WebApplicationException(Response.status(Response.Status.NO_CONTENT)
@@ -794,13 +804,6 @@ public class PredictionResource extends BaseResource {
 
 
          /*  pull out algorithm type */
-        final NeuralNetEndpoint temporaryEmptyEndpoint = new NeuralNetEndpoint() {
-            @Override
-            public Optional<NeuralNetAlgorithmOutput> getNetOutput(String s, double[][] doubles) {
-                return Optional.absent();
-            }
-        };
-
         final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO,priorsDAO,defaultModelEnsembleDAO,featureExtractionModelsDAO,neuralNetEndpoint,Optional.<UUID>absent());
 
         final TimelineLog timelineLog = new TimelineLog(accountId,dateOfNight.getMillis());
@@ -831,9 +834,25 @@ public class PredictionResource extends BaseResource {
         }
 
         if (resultOptional.isPresent()) {
-            events = resultOptional.get().mainEvents.values().asList();
+            events = Lists.newArrayList(resultOptional.get().mainEvents.values().asList());
         }
 
+
+        Collections.sort(events, new Comparator<Event>() {
+            @Override
+            public int compare(Event o1, Event o2) {
+                if (o1.getStartTimestamp() < o2.getStartTimestamp()) {
+                    return -1;
+                }
+
+                if (o1.getStartTimestamp() > o2.getStartTimestamp()) {
+                    return 1;
+                }
+
+                return 0;
+
+            }
+        });
         
         final List<FeedbackUtils.EventWithTime> feedbacksAsEvents = FeedbackUtils.getFeedbackEventsWithOriginalTime(oneDaysSensorData.feedbackList.asList(), oneDaysSensorData.timezoneOffsetMillis);
 
