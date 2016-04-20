@@ -3,6 +3,7 @@ package com.hello.suripu.research.configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hello.suripu.coredw.configuration.DynamoDBConfiguration;
 import com.hello.suripu.coredw.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredw.configuration.TaimurainHttpClientConfiguration;
 import com.yammer.dropwizard.config.Configuration;
 import com.yammer.dropwizard.db.DatabaseConfiguration;
 
@@ -137,4 +138,9 @@ public class SuripuResearchConfiguration extends Configuration {
     @JsonProperty("timeline_seed_model")
     private S3BucketConfiguration timelineSeedModelConfiguration;
     public S3BucketConfiguration getTimelineSeedModelConfiguration() { return timelineSeedModelConfiguration; }
+
+    @NotNull
+    @JsonProperty("taimurain_http_client")
+    private TaimurainHttpClientConfiguration taimurainHttpClientConfiguration;
+    public TaimurainHttpClientConfiguration getTaimurainHttpClientConfiguration() { return taimurainHttpClientConfiguration; }
 }

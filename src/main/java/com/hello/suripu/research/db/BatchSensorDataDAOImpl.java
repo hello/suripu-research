@@ -12,14 +12,13 @@ import com.hello.suripu.core.models.DeviceData;
 import com.hello.suripu.core.models.Sample;
 import com.hello.suripu.core.models.Sensor;
 import com.hello.suripu.research.db.mappers.SimpleDeviceDataMapper;
-import com.hello.suripu.research.models.SenseDataLine;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeConstants;
 import org.joda.time.DateTimeZone;
 import org.skife.jdbi.v2.sqlobject.Bind;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
 import org.skife.jdbi.v2.sqlobject.customizers.RegisterMapper;
-import org.skife.jdbi.v2.unstable.BindIn;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -27,29 +26,39 @@ import java.util.Map;
 /**
  * Created by benjo on 4/19/16.  This is for use with Redshift.
  */
+
 @RegisterMapper(SimpleDeviceDataMapper.class)
 public abstract class BatchSensorDataDAOImpl implements BatchSenseDataDAO {
-    final private static int SLOT_DURATION_MINUTES = 1;
 
     /*
-    @SqlQuery("SELECT DISTINCT account_id FROM timeline_feedback " +
-            "WHERE date_of_night >= :start_ts AND date_of_night < :end_ts AND  account_id IN " +
-            "(SELECT account_id FROM account_device_map " +
-            "JOIN " +
-            "(SELECT device_name,COUNT(*) FROM account_device_map GROUP BY device_name HAVING COUNT(*) > 1) as partner_devices " +
-            "on account_device_map.device_name = partner_devices.device_name)")
-    public abstract List<Long> getPartnerAccountsThatHadFeedback(@Bind("start_ts") final DateTime startDate, @Bind("end_ts") final DateTime endDate);
-    */
+    @QueryTimeOut(10000)
+    @SqlQuery("SELECT COUNT(1) FROM device_sensors_master")
+    @RegisterMapper(LongMapper.class)
+    public abstract List<Long> testConnection();
+*/
 
-    @SqlQuery("SELECT account_id,ts,offset_millis,ambient_light,wave_count,audio_num_disturbances,audio_peak_disturbances_db" +
-            "WHERE local_utc_ts >= :start_ts AND local_utc_ts <= :end_ts AND account_id IN (<account_list>) " +
+    @SqlQuery("SELECT account_id, ts, offset_millis, ambient_light, wave_count, audio_num_disturbances, audio_peak_disturbances_db, audio_peak_energy_db FROM device_sensors_master " +
+            "WHERE local_utc_ts >= \'2016-02-02 00:00:00\' AND local_utc_ts <= \'2016-02-02 01:00:00\' AND account_id IN (1002,1012) ORDER BY account_id,ts ASC")
+    public abstract List<DeviceData> getSensorDataForAccountsByLocalTime(@Bind("start_ts") final DateTime startDate, @Bind("end_ts") final DateTime endDate, @Bind("account_list") final String accounts);
+
+
+    @SqlQuery("SELECT * FROM device_sensors_master " +
+            "WHERE local_utc_ts >= :start_ts " +
+            "AND local_utc_ts <= :end_ts " +
+            "AND account_id IN (:accounts) " +
             "ORDER BY account_id,ts ASC")
-    public abstract List<DeviceData> getSensorDataForAccountsByLocalTime(@Bind("start_ts") final DateTime startDate, @Bind("end_ts") final DateTime endDate, @BindIn("account_list") final List<Long> accounts);
+    public abstract List<DeviceData> getSensorDataForAccountsByLocalTime3(@Bind("start_ts") final DateTime startDate,@Bind("end_ts") final DateTime endDate,@Bind("accounts") final String accounts);
 
+    final private static int SLOT_DURATION_MINUTES = 1;
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(BatchSensorDataDAOImpl.class);
 
     private static AllSensorSampleList getListFromDeviceData(final List<DeviceData> deviceDataList) {
         final AllSensorSampleList sensorDataResults = new AllSensorSampleList();
         final AllSensorSampleMap allSensorSampleMap = Bucketing.populateMapAll(deviceDataList,Optional.<Device.Color>absent(),Optional.<Calibration>absent(),false);
+
+        if (deviceDataList.isEmpty()) {
+            return sensorDataResults;
+        }
 
         final DeviceData last = deviceDataList.get(deviceDataList.size()-1);
         final DeviceData first = deviceDataList.get(0);
@@ -78,20 +87,41 @@ public abstract class BatchSensorDataDAOImpl implements BatchSenseDataDAO {
     @Override
     public Map<Long, AllSensorSampleList> getDataInTimeRangeForListOfUsersInLocalTimezone(final DateTime startTimeInclusive,final  DateTime endTimeInclusive,final List<Long> accounts) {
         final Map<Long, AllSensorSampleList> results = Maps.newHashMap();
-        final List<DeviceData> sensorData = getSensorDataForAccountsByLocalTime(startTimeInclusive,endTimeInclusive,accounts);
 
-        final DeviceData theLast = sensorData.get(sensorData.size() - 1);
-        DeviceData lastData = null;
-        List<DeviceData> dataFromAccount = Lists.newArrayList();
-        for (final DeviceData data : sensorData) {
+        String accountsStr = "";
 
-            if ((lastData != null && !lastData.accountId.equals(data.accountId)) || data.equals(theLast)) {
-                results.put(lastData.accountId,getListFromDeviceData(dataFromAccount));
-                dataFromAccount = Lists.newArrayList();
+        for (final Long l : accounts) {
+            if (!accountsStr.isEmpty()) {
+                accountsStr += ",";
             }
+            accountsStr += l.toString();
+        }
 
+        try {
 
-            lastData = data;
+            LOGGER.info("running query between {} and {} for {} accounts",startTimeInclusive,endTimeInclusive,accounts.size());
+
+            final List<DeviceData> sensorData = getSensorDataForAccountsByLocalTime3(startTimeInclusive, startTimeInclusive.plusHours(1), accountsStr);
+
+            LOGGER.info("got {} rows",sensorData.size());
+
+            final DeviceData theLast = sensorData.get(sensorData.size() - 1);
+            DeviceData lastData = null;
+            List<DeviceData> dataFromAccount = Lists.newArrayList();
+            for (final DeviceData data : sensorData) {
+
+                if ((lastData != null && !lastData.accountId.equals(data.accountId)) || data.equals(theLast)) {
+                    results.put(lastData.accountId, getListFromDeviceData(dataFromAccount));
+                    dataFromAccount = Lists.newArrayList();
+                }
+
+                dataFromAccount.add(data);
+
+                lastData = data;
+            }
+        }
+        catch (final Exception e) {
+            LOGGER.error(e.getMessage());
         }
 
         return results;

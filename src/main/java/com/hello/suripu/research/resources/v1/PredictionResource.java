@@ -1,6 +1,7 @@
 package com.hello.suripu.research.resources.v1;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -12,6 +13,7 @@ import com.hello.suripu.algorithm.sleep.SleepEvents;
 import com.hello.suripu.algorithm.sleep.Vote;
 import com.hello.suripu.api.datascience.SleepHmmProtos;
 import com.hello.suripu.core.algorithmintegration.AlgorithmFactory;
+import com.hello.suripu.core.algorithmintegration.NeuralNetAlgorithm;
 import com.hello.suripu.core.algorithmintegration.NeuralNetAlgorithmOutput;
 import com.hello.suripu.core.algorithmintegration.NeuralNetEndpoint;
 import com.hello.suripu.core.algorithmintegration.OneDaysSensorData;
@@ -108,6 +110,7 @@ public class PredictionResource extends BaseResource {
     private static final String ALGORITHM_VOTING = "voting";
     private static final String ALGORITHM_HIDDEN_MARKOV = "hmm";
     private static final String ALGORITHM_ONLINEHMM = "online";
+    private static final String ALGORITHM_NEURAL_NET = "net";
 
     private static final Integer MISSING_DATA_DEFAULT_VALUE = 0;
     private static final Integer SLOT_DURATION_MINUTES = 1;
@@ -125,6 +128,7 @@ public class PredictionResource extends BaseResource {
     private final FeatureExtractionModelsDAO featureExtractionModelsDAO;
     private final OnlineHmmModelsDAO priorsDAO;
     private final DefaultModelEnsembleDAO defaultModelEnsembleDAO;
+    final NeuralNetEndpoint neuralNetEndpoint;
 
     public PredictionResource(final AccountDAO accountDAO,
                               final TrackerMotionDAO trackerMotionDAO,
@@ -136,7 +140,8 @@ public class PredictionResource extends BaseResource {
                               final SenseColorDAO senseColorDAO,
                               final FeatureExtractionModelsDAO featureExtractionModelsDAO,
                               final OnlineHmmModelsDAO priorsDAO,
-                              final DefaultModelEnsembleDAO defaultModelEnsembleDAO) {
+                              final DefaultModelEnsembleDAO defaultModelEnsembleDAO,
+                              final NeuralNetEndpoint neuralNetEndpoint) {
 
         this.accountDAO = accountDAO;
         this.trackerMotionDAO = trackerMotionDAO;
@@ -150,6 +155,7 @@ public class PredictionResource extends BaseResource {
         this.featureExtractionModelsDAO = featureExtractionModelsDAO;
         this.priorsDAO = priorsDAO;
         this.defaultModelEnsembleDAO = defaultModelEnsembleDAO;
+        this.neuralNetEndpoint = neuralNetEndpoint;
     }
 
 
@@ -195,8 +201,7 @@ public class PredictionResource extends BaseResource {
         return ImmutableList.copyOf(Collections.EMPTY_LIST);
 
     }
-
-
+    
     /*  Get sleep/wake events from the hidden markov model  */
     private ImmutableList<Event> getHmmEvents(final DateTime targetDate, final DateTime endDate,final long  currentTimeMillis,final long accountId,
                                      final AllSensorSampleList allSensorSampleList, final List<TrackerMotion> myMotion,final SleepHmmDAO hmmDAO) {
@@ -796,7 +801,7 @@ public class PredictionResource extends BaseResource {
             }
         };
 
-        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO,priorsDAO,defaultModelEnsembleDAO,featureExtractionModelsDAO,temporaryEmptyEndpoint,Optional.<UUID>absent());
+        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO,priorsDAO,defaultModelEnsembleDAO,featureExtractionModelsDAO,neuralNetEndpoint,Optional.<UUID>absent());
 
         final TimelineLog timelineLog = new TimelineLog(accountId,dateOfNight.getMillis());
 
@@ -813,6 +818,10 @@ public class PredictionResource extends BaseResource {
 
             case ALGORITHM_ONLINEHMM:
                 resultOptional = factory.get(AlgorithmType.ONLINE_HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
+                break;
+
+            case ALGORITHM_NEURAL_NET:
+                resultOptional = factory.get(AlgorithmType.NEURAL_NET).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
                 break;
 
             default:

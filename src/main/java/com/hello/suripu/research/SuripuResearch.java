@@ -33,6 +33,7 @@ import com.hello.suripu.core.db.DeviceDataDAO;
 import com.hello.suripu.core.db.FeatureStore;
 import com.hello.suripu.core.db.FeedbackDAO;
 import com.hello.suripu.core.db.RingTimeHistoryDAODynamoDB;
+import com.hello.suripu.coredw.clients.TaimurainHttpClient;
 import com.hello.suripu.coredw.configuration.S3BucketConfiguration;
 import com.hello.suripu.coredw.db.SleepHmmDAODynamoDB;
 import com.hello.suripu.core.db.SleepStatsDAODynamoDB;
@@ -61,6 +62,7 @@ import com.hello.suripu.research.resources.v1.DataScienceResource;
 import com.hello.suripu.research.resources.v1.PredictionResource;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.yammer.dropwizard.Service;
+import com.yammer.dropwizard.client.HttpClientBuilder;
 import com.yammer.dropwizard.config.Bootstrap;
 import com.yammer.dropwizard.config.Environment;
 import com.yammer.dropwizard.jdbi.DBIFactory;
@@ -116,17 +118,18 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
         researchDB.registerContainerFactory(new ImmutableListContainerFactory());
         researchDB.registerContainerFactory(new ImmutableSetContainerFactory());
 
+        final DeviceDataDAO deviceDataDAO = sensorsDB.onDemand(DeviceDataDAO.class);
+        final BatchSenseDataDAO batchSenseDataDAO = sensorsDB.onDemand(BatchSensorDataDAOImpl.class);
+        final TrackerMotionDAO trackerMotionDAO = sensorsDB.onDemand(TrackerMotionDAO.class);
+
         final LabelDAO labelDAO = commonDB.onDemand(LabelDAOImpl.class);
         final AccountDAO accountDAO = commonDB.onDemand(AccountDAOImpl.class);
-        final DeviceDataDAO deviceDataDAO = sensorsDB.onDemand(DeviceDataDAO.class);
-        final TrackerMotionDAO trackerMotionDAO = sensorsDB.onDemand(TrackerMotionDAO.class);
         final UserLabelDAO userLabelDAO = commonDB.onDemand(UserLabelDAO.class);
         final DeviceDAO deviceDAO = commonDB.onDemand(DeviceDAO.class);
         final ApplicationsDAO applicationsDAO = commonDB.onDemand(ApplicationsDAO.class);
         final AccessTokenDAO accessTokenDAO = commonDB.onDemand(AccessTokenDAO.class);
         final FeedbackDAO feedbackDAO = commonDB.onDemand(FeedbackDAO.class);
         final SenseColorDAO senseColorDAO = commonDB.onDemand(SenseColorDAOSQLImpl.class);
-        final BatchSenseDataDAO batchSenseDataDAO = sensorsDB.onDemand(BatchSensorDataDAOImpl.class);
         // TODO: create research DB DAOs here
 
         final PersistentApplicationStore applicationStore = new PersistentApplicationStore(applicationsDAO);
@@ -136,6 +139,11 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
         final ClientConfiguration clientConfiguration = new ClientConfiguration();
         clientConfiguration.withConnectionTimeout(200); // in ms
         clientConfiguration.withMaxErrorRetry(1);
+
+        final TaimurainHttpClient taimurainHttpClient = TaimurainHttpClient.create(
+                new HttpClientBuilder().using(configuration.getTaimurainHttpClientConfiguration().getHttpClientConfiguration()).build(),
+                configuration.getTaimurainHttpClientConfiguration().getEndpoint());
+
 
         final AWSCredentialsProvider awsCredentialsProvider = new DefaultAWSCredentialsProviderChain();
         final AmazonKinesisAsyncClient kinesisClient = new AmazonKinesisAsyncClient(awsCredentialsProvider, clientConfiguration);
@@ -223,7 +231,7 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
                 deviceDataDAO, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
 
 
-        environment.addResource(new PredictionResource(accountDAO,trackerMotionDAO,deviceDataDAO,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO));
+        environment.addResource(new PredictionResource(accountDAO,trackerMotionDAO,deviceDataDAO,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO,taimurainHttpClient));
         environment.addResource(new AccountInfoResource(accountDAO, deviceDAO));
         environment.addResource(new BatchPredictionResource(batchSenseDataDAO,senseColorDAO));
 

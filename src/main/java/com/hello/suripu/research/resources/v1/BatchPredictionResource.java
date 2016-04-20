@@ -1,5 +1,6 @@
 package com.hello.suripu.research.resources.v1;
 
+import com.google.common.collect.Lists;
 import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.models.AllSensorSampleList;
 import com.hello.suripu.core.oauth.AccessToken;
@@ -45,9 +46,9 @@ public class BatchPredictionResource {
     @Path("/sleep_events/{query_date_local_utc}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public void getSleepPredictionsByUserAndAlgorithm(  @Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    public Integer getSleepPredictionsByUserAndAlgorithm(  /*@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,*/
                                                         @PathParam("query_date_local_utc") final String strTargetDate,
-                                                        @DefaultValue("[]") @QueryParam("hmm_protobuf") final List<Long> accounts) {
+                                                        @DefaultValue("") @QueryParam("accounts") final List<String> accountsStrs) {
 
 
           /*  Time stuff */
@@ -62,10 +63,17 @@ public class BatchPredictionResource {
         LOGGER.debug("Target date: {}", targetDate);
         LOGGER.debug("End date: {}", endDate);
 
+        final List<Long> accounts = Lists.newArrayList();
+        for (final String str : accountsStrs) {
+            accounts.add(Long.valueOf(str));
+        }
+
         final Map<Long,AllSensorSampleList> sensorData =  this.batchData.getDataInTimeRangeForListOfUsersInLocalTimezone(targetDate,endDate,accounts);
 
         int foo = 3;
         foo++;
+
+        return 1;
     }
 }
 
