@@ -179,24 +179,11 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
         final CalibrationDAO calibrationDAO = CalibrationDynamoDB.create(calibrationDynamoDBClient, configuration.getCalibrationConfiguration().getTableName());
 
 
-        //ring time history
-        final AmazonDynamoDB ringTimeHistoryDynamoDBClient = dynamoDBClientFactory.getForEndpoint(configuration.getRingTimeHistoryDBConfiguration().getEndpoint());
-        final RingTimeHistoryDAODynamoDB ringTimeHistoryDAODynamoDB = new RingTimeHistoryDAODynamoDB(ringTimeHistoryDynamoDBClient,
-                configuration.getRingTimeHistoryDBConfiguration().getTableName());
-
-        //sleep stats
-        final AmazonDynamoDB dynamoDBStatsClient = dynamoDBClientFactory.getForEndpoint(configuration.getSleepStatsDynamoConfiguration().getEndpoint());
-        final SleepStatsDAODynamoDB sleepStatsDAODynamoDB = new SleepStatsDAODynamoDB(dynamoDBStatsClient,
-                configuration.getSleepStatsDynamoConfiguration().getTableName(),
-                configuration.getSleepStatsVersion());
 
         /*  Timeline Log dynamo dB stuff */
         final String timelineLogTableName =   configuration.getTimelineLogDBConfiguration().getTableName();
         final AmazonDynamoDB timelineLogDynamoDBClient = dynamoDBClientFactory.getForEndpoint(configuration.getTimelineLogDBConfiguration().getEndpoint());
         final TimelineLogDAO timelineLogDAO = new TimelineLogDAODynamoDB(timelineLogDynamoDBClient,timelineLogTableName);
-
-        final AmazonDynamoDB deviceDataDAODynamoDBClient = new AmazonDynamoDBClient(awsCredentialsProvider, clientConfiguration);
-        final DeviceDataDAODynamoDB deviceDataDAODynamoDB = new DeviceDataDAODynamoDB(deviceDataDAODynamoDBClient, configuration.getDeviceDataConfiguration().getTableName());
 
         final RolloutResearchModule module = new RolloutResearchModule(featureStore, 30);
         ObjectGraphRoot.getInstance().init(module);

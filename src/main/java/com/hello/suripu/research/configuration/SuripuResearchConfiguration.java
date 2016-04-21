@@ -67,29 +67,6 @@ public class SuripuResearchConfiguration extends Configuration {
         return this.sleepHmmDBConfiguration;
     }
 
-    @Valid
-    @NotNull
-    @JsonProperty("ring_history_db")
-    private DynamoDBConfiguration ringTimeHistoryDBConfiguration;
-    public DynamoDBConfiguration getRingTimeHistoryDBConfiguration(){
-        return this.ringTimeHistoryDBConfiguration;
-    }
-
-    @Valid
-    @NotNull
-    @JsonProperty("sleep_stats_db")
-    private DynamoDBConfiguration sleepStatsDynamoDBConfiguration;
-    public DynamoDBConfiguration getSleepStatsDynamoConfiguration(){
-        return this.sleepStatsDynamoDBConfiguration;
-    }
-
-    @Valid
-    @NotNull
-    @JsonProperty("sleep_stats_version")
-    private String sleepStatsVersion;
-    public String getSleepStatsVersion() {
-        return this.sleepStatsVersion;
-    }
 
     @Valid
     @NotNull
@@ -121,11 +98,6 @@ public class SuripuResearchConfiguration extends Configuration {
     private DynamoDBConfiguration calibrationConfiguration;
     public DynamoDBConfiguration getCalibrationConfiguration() {return this.calibrationConfiguration;}
 
-    @Valid
-    @NotNull
-    @JsonProperty("device_data")
-    private DynamoDBConfiguration deviceDataConfiguration;
-    public DynamoDBConfiguration getDeviceDataConfiguration() { return this.deviceDataConfiguration; }
 
     @Valid
     @NotNull
