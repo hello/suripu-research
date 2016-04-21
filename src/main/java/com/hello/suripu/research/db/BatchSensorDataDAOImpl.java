@@ -18,6 +18,8 @@ import org.joda.time.DateTimeZone;
 import org.skife.jdbi.v2.sqlobject.Bind;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
 import org.skife.jdbi.v2.sqlobject.customizers.RegisterMapper;
+import org.skife.jdbi.v2.sqlobject.stringtemplate.UseStringTemplate3StatementLocator;
+import org.skife.jdbi.v2.unstable.BindIn;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
@@ -40,9 +42,9 @@ public abstract class BatchSensorDataDAOImpl implements BatchSenseDataDAO {
             "FROM device_sensors_master " +
             "WHERE local_utc_ts >= :start_ts " +
             "AND local_utc_ts <= :end_ts " +
-            "AND account_id IN (:accounts) " +
+            "AND account_id = ANY(:accounts) " +
             "ORDER BY account_id,ts ASC")
-    public abstract List<DeviceData> getSensorDataForAccountsByLocalTime(@Bind("start_ts") final DateTime startDate,@Bind("end_ts") final DateTime endDate,@Bind("accounts") final String accounts);
+    public abstract List<DeviceData> getSensorDataForAccountsByLocalTime(@Bind("start_ts") final DateTime startDate,@Bind("end_ts") final DateTime endDate,@Bind("accounts") final List<Long> accounts);
 
     final private static int SLOT_DURATION_MINUTES = 1;
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(BatchSensorDataDAOImpl.class);
@@ -83,20 +85,16 @@ public abstract class BatchSensorDataDAOImpl implements BatchSenseDataDAO {
     public Map<Long, AllSensorSampleList> getDataInTimeRangeForListOfUsersInLocalTimezone(final DateTime startTimeInclusive,final  DateTime endTimeInclusive,final List<Long> accounts) {
         final Map<Long, AllSensorSampleList> results = Maps.newHashMap();
 
-        String accountsStr = "";
-
+        final List<String> accs = Lists.newArrayList();
         for (final Long l : accounts) {
-            if (!accountsStr.isEmpty()) {
-                accountsStr += ",";
-            }
-            accountsStr += l.toString();
+            accs.add(l.toString());
         }
 
         try {
 
             LOGGER.info("running query between {} and {} for {} accounts",startTimeInclusive,endTimeInclusive,accounts.size());
 
-            final List<DeviceData> sensorData = getSensorDataForAccountsByLocalTime(startTimeInclusive, startTimeInclusive.plusHours(1), accountsStr);
+            final List<DeviceData> sensorData = getSensorDataForAccountsByLocalTime(startTimeInclusive, startTimeInclusive.plusHours(1), accounts);
 
             LOGGER.info("got {} rows",sensorData.size());
 

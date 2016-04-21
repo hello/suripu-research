@@ -55,6 +55,7 @@ import com.hello.suripu.research.db.BatchSenseDataDAO;
 import com.hello.suripu.research.db.BatchSensorDataDAOImpl;
 import com.hello.suripu.research.db.LabelDAO;
 import com.hello.suripu.research.db.LabelDAOImpl;
+import com.hello.suripu.research.db.bindings.ListArgumentFactory;
 import com.hello.suripu.research.modules.RolloutResearchModule;
 import com.hello.suripu.research.resources.v1.AccountInfoResource;
 import com.hello.suripu.research.resources.v1.BatchPredictionResource;
@@ -104,6 +105,7 @@ public class SuripuResearch extends Service<SuripuResearchConfiguration> {
         sensorsDB.registerArgumentFactory(new JodaArgumentFactory());
         sensorsDB.registerContainerFactory(new OptionalContainerFactory());
         sensorsDB.registerArgumentFactory(new PostgresIntegerArrayArgumentFactory());
+        sensorsDB.registerArgumentFactory(new ListArgumentFactory());
 
 
         commonDB.registerArgumentFactory(new JodaArgumentFactory());
