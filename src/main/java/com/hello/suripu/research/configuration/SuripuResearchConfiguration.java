@@ -22,17 +22,7 @@ public class SuripuResearchConfiguration extends Configuration {
     public DataSourceFactory getCommonDB() {
         return commonDB;
     }
-
-    /*
-    @Valid
-    @NotNull
-    @JsonProperty("research_db")
-    private DataSourceFactory researchDB = new DataSourceFactory();
-    public DataSourceFactory getResearchDB() {
-        return researchDB;
-    }
-    */
-
+    
     @Valid
     @JsonProperty("debug")
     private Boolean debug = Boolean.FALSE;

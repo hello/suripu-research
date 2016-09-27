@@ -27,10 +27,10 @@ server:
   applicationContextPath: /
   applicationConnectors:
     - type: http
-      port: 9988
+      port: 9987
   adminConnectors:
     - type: http
-      port: 9987
+      port: 9988
   requestLog:
     appenders:
       - type: console
