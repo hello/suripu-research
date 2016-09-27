@@ -1,209 +1,165 @@
-debug: false
-
-sensors_db:
-  driverClass: org.postgresql.Driver
-  user: sensors
-  password: hello-sensors
-  url: jdbc:postgresql://sensors-1-replica-2.cdawj8qazvva.us-east-1.rds.amazonaws.com:5432/sensors1
-
-  # any properties specific to your JDBC driver:
-  properties:
-    charSet: UTF-8
-
-  # the maximum amount of time to wait on an empty pool before throwing an exception
-  maxWaitForConnection: 1s
-
-  # the SQL query to run when validating a connection's liveness
-  validationQuery: "/* MyService Health Check */ SELECT 1"
-
-  # the minimum number of connections to keep open
-  minSize: 2
-
-  # the maximum number of connections to keep open
-  maxSize: 8
-
-  # whether or not idle connections should be validated
-  checkConnectionWhileIdle: false
-
-  # how long a connection must be held before it can be validated
-  checkConnectionHealthWhenIdleFor: 10s
-
-  # the maximum lifetime of an idle connection
-  closeConnectionIfIdleFor: 1 minute
+debug: true
 
 common_db:
+  # the name of your JDBC driver
   driverClass: org.postgresql.Driver
-  user: common
-  password: hello-common
-  url: jdbc:postgresql://common.cdawj8qazvva.us-east-1.rds.amazonaws.com:5432/common
-  properties:
-    hibernate.dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
+
+  # the username
+  user: your user goes here
+
+  # the password
+  password:
+
+  # the JDBC URL
+  url: jdbc:postgresql://localhost:5432/something
 
   # any properties specific to your JDBC driver:
   properties:
     charSet: UTF-8
-
-  # the maximum amount of time to wait on an empty pool before throwing an exception
-  maxWaitForConnection: 1s
-
-  # the SQL query to run when validating a connection's liveness
-  validationQuery: "/* MyService Health Check */ SELECT 1"
-
-  # the minimum number of connections to keep open
-  minSize: 2
-
-  # the maximum number of connections to keep open
-  maxSize: 8
-  # whether or not idle connections should be validated
-  checkConnectionWhileIdle: false
-
-  # how long a connection must be held before it can be validated
-  checkConnectionHealthWhenIdleFor: 10s
-
-  # the maximum lifetime of an idle connection
-  closeConnectionIfIdleFor: 1 minute
 
 research_db:
+  # the name of your JDBC driver
   driverClass: org.postgresql.Driver
-  user: research_user
-  password: hello-research-user
-  url: jdbc:postgresql://research.cdawj8qazvva.us-east-1.rds.amazonaws.com:5432/research
-  properties:
-    hibernate.dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
+
+  # the username
+  user: your local-db user name
+
+  # the password
+  password: your local-db password
+
+  # the JDBC URL
+  url: jdbc:postgresql://localhost:5432/research
 
   # any properties specific to your JDBC driver:
   properties:
     charSet: UTF-8
 
-  # the maximum amount of time to wait on an empty pool before throwing an exception
-  maxWaitForConnection: 1s
+server:
+  adminMinThreads: 1
+  adminMaxThreads: 64
+  adminContextPath: /
+  applicationContextPath: /
+  applicationConnectors:
+    - type: http
+      port: 9999
+  adminConnectors:
+    - type: http
+      port: 9998
+  requestLog:
+    appenders:
+      - type: console
 
-  # the SQL query to run when validating a connection's liveness
-  validationQuery: "/* MyService Health Check */ SELECT 1"
-
-  # the minimum number of connections to keep open
-  minSize: 2
-
-  # the maximum number of connections to keep open
-  maxSize: 4
-
-  # whether or not idle connections should be validated
-  checkConnectionWhileIdle: false
-
-  # how long a connection must be held before it can be validated
-  checkConnectionHealthWhenIdleFor: 10s
-
-  # the maximum lifetime of an idle connection
-  closeConnectionIfIdleFor: 1 minute
-
-
-http:
-
-  # The port on which the HTTP server listens for service requests.
-  # Because Java cannot drop privileges in a POSIX system, these
-  # ports cannot be in the range 1-1024. A port value of 0 will
-  # make the OS use an arbitrary unused port.
-  port: 9997
-
-  # The port on which the HTTP server listens for administrative
-  # requests. Subject to the same limitations as "port".
-  adminPort: 9996
-
-# Logging settings.
 logging:
-
-  # The default level of all loggers. Can be OFF, ERROR, WARN, INFO, DEBUG, TRACE, or ALL.
   level: INFO
-
-  # Logger-specific levels.
   loggers:
+    com.hello.suripu.app: INFO
+    com.hello.suripu.core: DEBUG
+    com.amazonaws: WARN
+  appenders:
+     - type: console
 
-    # Sets the level for 'com.example.app' to DEBUG.
-    com.hello.suripu: DEBUG
-  # Settings for logging to a file.
-  file:
-    enabled: true
-    threshold: DEBUG
-    currentLogFilename: /var/log/suripu-research/suripu-research.log
-    # When the log file rotates, the archived log will be renamed to this and gzipped. The
-    # %d is replaced with the previous day (yyyy-MM-dd). Custom rolling windows can be created
-    # by passing a SimpleDateFormat-compatible format as an argument: "%d{yyyy-MM-dd-hh}".
-    archivedLogFilenamePattern: /var/log/suripu-workers/suripu-research-%d{yyyy-MM-dd}.log.gz
-    # The number of archived files to keep.
-    archivedFileCount: 7
-    # The timezone used to format dates. HINT: USE THE DEFAULT, UTC.
-    timeZone: UTC
-
-kinesis:
-  endpoint : https://kinesis.us-east-1.amazonaws.com
-  streams :
-    audio_features : audio_features
-    activity_stream : activity_stream
-    registrations: registrations
-    encode_audio : encode_audio
-    batch_pill_data : batch_pill_data
-    sense_sensors_data : sense_sensors_data
-
-features_db:
-    endpoint : http://dynamodb.us-east-1.amazonaws.com
-    region: us-east-1
-    table_name: features
-
-kinesis_logger:
-  stream_name: logs
-  enabled : true
-  buffer_size: 100
-  origin: suripu-research
-sleephmm_db:
-  endpoint : http://dynamodb.us-east-1.amazonaws.com
-  region: us-east-1
-  table_name: sleephmm
-
-ring_history_db:
-  endpoint : http://dynamodb.us-east-1.amazonaws.com
-  region: us-east-1
-  table_name: prod_ring_history
+timeline_algorithm_configuration:
+  artificial_light_start_time: "21:30"
+  artificial_light_stop_time: "05:00"
 
 # store sleep scores and other stats
 # v0.2: score uses movement and duration
-sleep_stats_db:
-    endpoint : http://dynamodb.us-east-1.amazonaws.com
-    region: us-east-1
-    table_name: prod_sleep_stats
 sleep_stats_version: v_0_2
 
-timeline_log_db:
-  endpoint: http://dynamodb.us-east-1.amazonaws.com
-  region: us-east-1
-  table_name: prod_timeline_log
-
-feature_extraction_models:
-#  endpoint : http://dynamodb.us-east-1.amazonaws.com
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: feature_extraction_models
-
-online_hmm_models:
-#  endpoint : http://dynamodb.us-east-1.amazonaws.com
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: online_hmm_models
-
-calibration:
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: calibration
-
-device_data:
-  endpoint: http://dynamodb.us-east-1.amazonaws.com
-  region: us-east-1
-  table_name: sense_data
 
 timeline_model_ensembles:
   bucket: hello-timeline-models
   key: normal4ensemble.base64
-#  key: independent4.base64
 
 timeline_seed_model:
   bucket: hello-timeline-models
   key: normal4.base64
+
+
+dynamodb:
+  region: us-east-1
+  tables:
+    agg_stats: agg_stats
+    alarm: alarm
+    alarm_info: alarm_info
+    algorithm_test: algorithm_test
+    app_stats: app_stats
+    calibration: prod_calibration
+    device_data: prod_sense_data
+    feature_extraction_models: feature_extraction_models
+    features: features
+    file_manifest: file_manifest
+    insights: insights
+    insights_last_seen: insights_last_seen
+    marketing_insights_seen: marketing_insights_seen
+    notifications: notifications
+    online_hmm_models: online_hmm_models
+    ota_history: ota_history
+    password_reset: password_reset
+    pill_data: prod_pill_data
+    pill_heartbeat: pill_heartbeat
+    pill_key_store: pill_key_store
+    preferences: preferences
+    profile_photo: profile_photo
+    push_notification_event: push_notification_event
+    ring_time: ring_time
+    ring_time_history: ring_history_by_account
+    sense_events: event
+    sense_key_store: key_store
+    sense_last_seen: sense_last_seen
+    sense_state: sense_state
+    sleep_hmm: sleephmm
+    sleep_score: sleep_score
+    sleep_score_parameters: sleep_score_parameters
+    sleep_stats: sleep_stats
+    smart_alarm_log: smart_alarm_log
+    speech_results: speech_results
+    speech_timeline: speech_timeline
+    swap_intents: swap_intents
+    sync_response_commands: response_commands
+    teams: teams
+    timeline: timeline
+    timeline_log: timeline_log
+    timezone_history: timezone_history
+    wifi_info: wifi_info
+  endpoints:
+    agg_stats: http://localhost:7777
+    alarm: http://localhost:7777
+    alarm_info: http://localhost:7777
+    algorithm_test: http://localhost:7777
+    app_stats: http://localhost:7777
+    calibration: http://dynamodb.us-east-1.amazonaws.com
+    device_data: http://dynamodb.us-east-1.amazonaws.com
+    feature_extraction_models: http://localhost:7777
+    features: http://localhost:7777
+    file_manifest: http://localhost:7777
+    insights: http://localhost:7777
+    insights_last_seen: http://localhost:7777
+    marketing_insights_seen: http://localhost:7777
+    notifications: http://localhost:7777
+    online_hmm_models: http://localhost:7777
+    ota_history: http://localhost:7777
+    password_reset: http://localhost:7777
+    pill_data: http://dynamodb.us-east-1.amazonaws.com
+    pill_heartbeat: http://localhost:7777
+    pill_key_store: http://localhost:7777
+    preferences: http://localhost:7777
+    profile_photo: http://localhost:7777
+    push_notification_event: http://localhost:7777
+    ring_time_history: http://localhost:7777
+    sense_key_store: http://localhost:7777
+    sense_last_seen: http://localhost:7777
+    sleep_hmm: http://localhost:7777
+    sense_state: http://localhost:7777
+    sleep_score: http://localhost:7777
+    sleep_score_parameters: http://localhost:7777
+    sleep_stats: http://localhost:7777
+    smart_alarm_log: http://localhost:7777
+    speech_results: http://localhost:7777
+    speech_timeline: http://localhost:7777
+    swap_intents: http://localhost:7777
+    sync_response_commands: http://localhost:7777
+    timeline: http://localhost:7777
+    timeline_log: http://localhost:7777
+    timezone_history: http://localhost:7777
+    wifi_info: http://localhost:7777
