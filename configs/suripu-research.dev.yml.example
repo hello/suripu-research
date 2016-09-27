@@ -1,34 +1,17 @@
 debug: true
 
-sensors_db:
-  # the name of your JDBC driver
-  driverClass: org.postgresql.Driver
-
-  # the username
-  user: your postgresql username
-
-  # the password
-  password: your postgresql password
-
-  # the JDBC URL
-  url: jdbc:postgresql://localhost:5432/[your postgresql username]
-
-  # any properties specific to your JDBC driver:
-  properties:
-    charSet: UTF-8
-
 common_db:
   # the name of your JDBC driver
   driverClass: org.postgresql.Driver
 
   # the username
-  user: tim
+  user: your user goes here
 
   # the password
-  password: hello ingress user
+  password:
 
   # the JDBC URL
-  url: jdbc:postgresql://localhost:5432/bingo
+  url: jdbc:postgresql://localhost:5432/something
 
   # any properties specific to your JDBC driver:
   properties:
@@ -51,107 +34,132 @@ research_db:
   properties:
     charSet: UTF-8
 
+server:
+  adminMinThreads: 1
+  adminMaxThreads: 64
+  adminContextPath: /
+  applicationContextPath: /
+  applicationConnectors:
+    - type: http
+      port: 9999
+  adminConnectors:
+    - type: http
+      port: 9998
+  requestLog:
+    appenders:
+      - type: console
 
-http:
-
-  # The port on which the HTTP server listens for service requests.
-  # Because Java cannot drop privileges in a POSIX system, these
-  # ports cannot be in the range 1-1024. A port value of 0 will
-  # make the OS use an arbitrary unused port.
-  port: 9997
-
-  # The port on which the HTTP server listens for administrative
-  # requests. Subject to the same limitations as "port".
-  adminPort: 9996
-
-# Logging settings.
 logging:
-
-  # The default level of all loggers. Can be OFF, ERROR, WARN, INFO, DEBUG, TRACE, or ALL.
   level: INFO
-
-  # Logger-specific levels.
   loggers:
+    com.hello.suripu.app: INFO
+    com.hello.suripu.core: DEBUG
+    com.amazonaws: WARN
+  appenders:
+     - type: console
 
-    # Sets the level for 'com.example.app' to DEBUG.
-    com.hello.suripu: DEBUG
-  # Settings for logging to a file.
-  file:
-    enabled: true
-    threshold: DEBUG
-    currentLogFilename: /var/log/suripu-research/suripu-research.log
-    # When the log file rotates, the archived log will be renamed to this and gzipped. The
-    # %d is replaced with the previous day (yyyy-MM-dd). Custom rolling windows can be created
-    # by passing a SimpleDateFormat-compatible format as an argument: "%d{yyyy-MM-dd-hh}".
-    archivedLogFilenamePattern: /var/log/suripu-workers/suripu-research-%d{yyyy-MM-dd}.log.gz
-    # The number of archived files to keep.
-    archivedFileCount: 7
-    # The timezone used to format dates. HINT: USE THE DEFAULT, UTC.
-    timeZone: UTC
-
-
-
-features_db:
-    endpoint : http://localhost:7777
-    region: us-east-1
-    table_name: features
-
-kinesis_logger:
-  stream_name: logs
-  enabled : false
-  buffer_size: 100
-  origin: suripu-research
-
-sleephmm_db:
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: sleephmm
-
-ring_history_db:
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: ring_history
+timeline_algorithm_configuration:
+  artificial_light_start_time: "21:30"
+  artificial_light_stop_time: "05:00"
 
 # store sleep scores and other stats
 # v0.2: score uses movement and duration
-sleep_stats_db:
-    endpoint : http://localhost:7777
-    region: us-east-1
-    table_name: prod_sleep_stats
 sleep_stats_version: v_0_2
 
-timeline_log_db:
-  endpoint: http://dynamodb.us-east-1.amazonaws.com
-  region: us-east-1
-  table_name: timeline_log
-
-feature_extraction_models:
-#  endpoint : http://dynamodb.us-east-1.amazonaws.com
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: feature_extraction_models
-
-online_hmm_models:
-#  endpoint : http://dynamodb.us-east-1.amazonaws.com
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: online_hmm_models
-
-calibration:
-  endpoint : http://localhost:7777
-  region: us-east-1
-  table_name: calibration
-
-device_data:
-  endpoint: http://localhost:7777
-  region: us-east-1
-  table_name: sense_data
 
 timeline_model_ensembles:
   bucket: hello-timeline-models
   key: normal4ensemble.base64
-#  key: independent4.base64
 
 timeline_seed_model:
   bucket: hello-timeline-models
   key: normal4.base64
+
+
+dynamodb:
+  region: us-east-1
+  tables:
+    agg_stats: agg_stats
+    alarm: alarm
+    alarm_info: alarm_info
+    algorithm_test: algorithm_test
+    app_stats: app_stats
+    calibration: calibration
+    device_data: sense_data
+    feature_extraction_models: feature_extraction_models
+    features: features
+    file_manifest: file_manifest
+    insights: insights
+    insights_last_seen: insights_last_seen
+    marketing_insights_seen: marketing_insights_seen
+    notifications: notifications
+    online_hmm_models: online_hmm_models
+    ota_history: ota_history
+    password_reset: password_reset
+    pill_data: pill_data
+    pill_heartbeat: pill_heartbeat
+    pill_key_store: pill_key_store
+    preferences: preferences
+    profile_photo: profile_photo
+    push_notification_event: push_notification_event
+    ring_time: ring_time
+    ring_time_history: ring_history_by_account
+    sense_events: event
+    sense_key_store: key_store
+    sense_last_seen: sense_last_seen
+    sense_state: sense_state
+    sleep_hmm: sleephmm
+    sleep_score: sleep_score
+    sleep_score_parameters: sleep_score_parameters
+    sleep_stats: sleep_stats
+    smart_alarm_log: smart_alarm_log
+    speech_results: speech_results
+    speech_timeline: speech_timeline
+    swap_intents: swap_intents
+    sync_response_commands: response_commands
+    teams: teams
+    timeline: timeline
+    timeline_log: timeline_log
+    timezone_history: timezone_history
+    wifi_info: wifi_info
+  endpoints:
+    agg_stats: http://localhost:7777
+    alarm: http://localhost:7777
+    alarm_info: http://localhost:7777
+    algorithm_test: http://localhost:7777
+    app_stats: http://localhost:7777
+    calibration: http://localhost:7777
+    device_data: http://localhost:7777
+    feature_extraction_models: http://localhost:7777
+    features: http://localhost:7777
+    file_manifest: http://localhost:7777
+    insights: http://localhost:7777
+    insights_last_seen: http://localhost:7777
+    marketing_insights_seen: http://localhost:7777
+    notifications: http://localhost:7777
+    online_hmm_models: http://localhost:7777
+    ota_history: http://localhost:7777
+    password_reset: http://localhost:7777
+    pill_data: http://localhost:7777
+    pill_heartbeat: http://localhost:7777
+    pill_key_store: http://localhost:7777
+    preferences: http://localhost:7777
+    profile_photo: http://localhost:7777
+    push_notification_event: http://localhost:7777
+    ring_time_history: http://localhost:7777
+    sense_key_store: http://localhost:7777
+    sense_last_seen: http://localhost:7777
+    sleep_hmm: http://localhost:7777
+    sense_state: http://localhost:7777
+    sleep_score: http://localhost:7777
+    sleep_score_parameters: http://localhost:7777
+    sleep_stats: http://localhost:7777
+    smart_alarm_log: http://localhost:7777
+    speech_results: http://localhost:7777
+    speech_timeline: http://localhost:7777
+    swap_intents: http://localhost:7777
+    sync_response_commands: http://localhost:7777
+    timeline: http://localhost:7777
+    timeline_log: http://localhost:7777
+    timezone_history: http://localhost:7777
+    wifi_info: http://localhost:7777

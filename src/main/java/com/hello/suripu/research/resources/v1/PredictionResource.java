@@ -4,13 +4,14 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.hello.suripu.algorithm.core.Segment;
-import com.hello.suripu.algorithm.hmm.HiddenMarkovModel;
 import com.hello.suripu.algorithm.hmm.HiddenMarkovModelInterface;
 import com.hello.suripu.algorithm.hmm.HmmDecodedResult;
 import com.hello.suripu.algorithm.sleep.SleepEvents;
 import com.hello.suripu.algorithm.sleep.Vote;
 import com.hello.suripu.api.datascience.SleepHmmProtos;
+import com.hello.suripu.core.algorithmintegration.AlgorithmConfiguration;
 import com.hello.suripu.core.algorithmintegration.AlgorithmFactory;
 import com.hello.suripu.core.algorithmintegration.NeuralNetAlgorithmOutput;
 import com.hello.suripu.core.algorithmintegration.NeuralNetEndpoint;
@@ -21,12 +22,12 @@ import com.hello.suripu.core.algorithmintegration.TimelineAlgorithmResult;
 import com.hello.suripu.core.db.AccountDAO;
 import com.hello.suripu.core.db.DefaultModelEnsembleDAO;
 import com.hello.suripu.core.db.DeviceDAO;
-import com.hello.suripu.core.db.DeviceDataDAO;
+import com.hello.suripu.core.db.DeviceDataDAODynamoDB;
 import com.hello.suripu.core.db.FeatureExtractionModelsDAO;
 import com.hello.suripu.core.db.FeedbackDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAO;
+import com.hello.suripu.core.db.PillDataDAODynamoDB;
 import com.hello.suripu.core.db.SleepHmmDAO;
-import com.hello.suripu.core.db.TrackerMotionDAO;
 import com.hello.suripu.core.db.UserLabelDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.models.AllSensorSampleList;
@@ -43,16 +44,12 @@ import com.hello.suripu.core.models.OnlineHmmModelParams;
 import com.hello.suripu.core.models.OnlineHmmPriors;
 import com.hello.suripu.core.models.OnlineHmmScratchPad;
 import com.hello.suripu.core.models.Sensor;
-import com.hello.suripu.core.models.Timeline;
 import com.hello.suripu.core.models.TimelineFeedback;
-import com.hello.suripu.core.models.TimelineResult;
 import com.hello.suripu.core.models.TrackerMotion;
 import com.hello.suripu.core.models.timeline.v2.TimelineLog;
 import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
 import com.hello.suripu.core.oauth.Scope;
-import com.hello.suripu.core.processors.TimelineProcessor;
-import com.hello.suripu.coredw.resources.BaseResource;
 import com.hello.suripu.core.util.AlgorithmType;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.core.util.FeatureExtractionModelData;
@@ -66,6 +63,8 @@ import com.hello.suripu.core.util.SoundUtils;
 import com.hello.suripu.core.util.TimelineError;
 import com.hello.suripu.core.util.TimelineUtils;
 import com.hello.suripu.core.util.TrackerMotionUtils;
+import com.hello.suripu.coredropwizard.resources.BaseResource;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import com.hello.suripu.research.models.AlphabetsAndLabels;
 import com.hello.suripu.research.models.EventsWithLabels;
 import com.hello.suripu.research.models.FeedbackAsIndices;
@@ -89,10 +88,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -114,8 +113,8 @@ public class PredictionResource extends BaseResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DataScienceResource.class);
     private final AccountDAO accountDAO;
-    private final TrackerMotionDAO trackerMotionDAO;
-    private final DeviceDataDAO deviceDataDAO;
+    private final PillDataDAODynamoDB trackerMotionDAO;
+    private final DeviceDataDAODynamoDB deviceDataDAO;
     private final DeviceDAO deviceDAO;
     private final UserLabelDAO userLabelDAO;
     private final SleepHmmDAO sleepHmmDAO;
@@ -125,10 +124,11 @@ public class PredictionResource extends BaseResource {
     private final FeatureExtractionModelsDAO featureExtractionModelsDAO;
     private final OnlineHmmModelsDAO priorsDAO;
     private final DefaultModelEnsembleDAO defaultModelEnsembleDAO;
+    private final AlgorithmConfiguration algorithmConfiguration;
 
     public PredictionResource(final AccountDAO accountDAO,
-                              final TrackerMotionDAO trackerMotionDAO,
-                              final DeviceDataDAO deviceDataDAO,
+                              final PillDataDAODynamoDB trackerMotionDAO,
+                              final DeviceDataDAODynamoDB deviceDataDAO,
                               final DeviceDAO deviceDAO,
                               final UserLabelDAO userLabelDAO,
                               final SleepHmmDAO sleepHmmDAO,
@@ -136,7 +136,8 @@ public class PredictionResource extends BaseResource {
                               final SenseColorDAO senseColorDAO,
                               final FeatureExtractionModelsDAO featureExtractionModelsDAO,
                               final OnlineHmmModelsDAO priorsDAO,
-                              final DefaultModelEnsembleDAO defaultModelEnsembleDAO) {
+                              final DefaultModelEnsembleDAO defaultModelEnsembleDAO,
+                              final AlgorithmConfiguration algorithmConfiguration) {
 
         this.accountDAO = accountDAO;
         this.trackerMotionDAO = trackerMotionDAO;
@@ -150,6 +151,7 @@ public class PredictionResource extends BaseResource {
         this.featureExtractionModelsDAO = featureExtractionModelsDAO;
         this.priorsDAO = priorsDAO;
         this.defaultModelEnsembleDAO = defaultModelEnsembleDAO;
+        this.algorithmConfiguration = algorithmConfiguration;
     }
 
 
@@ -404,7 +406,7 @@ public class PredictionResource extends BaseResource {
         sensorData = deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
                 targetDate.minusMillis(tzOffsetMillis).getMillis(),
                 endDate.minusMillis(tzOffsetMillis).getMillis(),
-                accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE, color, Optional.<Calibration>absent(),true);
+                accountId, deviceIdPair.get().externalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE, color, Optional.<Calibration>absent(),true);
 
 
         return new SensorData(sensorData,myMotions,partnerMotions,motions);
@@ -705,7 +707,7 @@ public class PredictionResource extends BaseResource {
             motions.addAll(myMotions);
         }
 
-        if (TimelineProcessor.isValidNight(accountId,myMotions,motions) != TimelineError.NO_ERROR) {
+        if (InstrumentedTimelineProcessor.isValidNight(accountId,myMotions,motions) != TimelineError.NO_ERROR) {
             LOGGER.warn("not a valid night");
             return Optional.absent();
         };
@@ -718,7 +720,7 @@ public class PredictionResource extends BaseResource {
         allSensorSampleList = deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
                 startTimeLocalUtc.minusMillis(tzOffsetMillis).getMillis(),
                 endTimeLocalUtc.minusMillis(tzOffsetMillis).getMillis(),
-                accountId, deviceIdPair.get().internalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE,color, Optional.<Calibration>absent(),true);
+                accountId, deviceIdPair.get().externalDeviceId, SLOT_DURATION_MINUTES, MISSING_DATA_DEFAULT_VALUE,color, Optional.<Calibration>absent(),true);
 
         return Optional.of(new OneDaysSensorData(
                 allSensorSampleList,
@@ -796,23 +798,25 @@ public class PredictionResource extends BaseResource {
             }
         };
 
-        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO,priorsDAO,defaultModelEnsembleDAO,featureExtractionModelsDAO,temporaryEmptyEndpoint,Optional.<UUID>absent());
+        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO, priorsDAO, defaultModelEnsembleDAO,featureExtractionModelsDAO,temporaryEmptyEndpoint, algorithmConfiguration, Optional.<UUID>absent());
 
         final TimelineLog timelineLog = new TimelineLog(accountId,dateOfNight.getMillis());
 
         Optional<TimelineAlgorithmResult> resultOptional = Optional.absent();
 
+        Set<String> something = Sets.newHashSet();
+
         switch (algorithm) {
             case ALGORITHM_VOTING:
-                resultOptional = factory.get(AlgorithmType.VOTING).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
+                resultOptional = factory.get(AlgorithmType.VOTING).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false, something);
                 break;
 
             case ALGORITHM_HIDDEN_MARKOV:
-                resultOptional = factory.get(AlgorithmType.HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
+                resultOptional = factory.get(AlgorithmType.HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false,something);
                 break;
 
             case ALGORITHM_ONLINEHMM:
-                resultOptional = factory.get(AlgorithmType.ONLINE_HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false);
+                resultOptional = factory.get(AlgorithmType.ONLINE_HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false, something);
                 break;
 
             default:
