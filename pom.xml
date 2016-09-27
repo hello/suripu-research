@@ -3,7 +3,7 @@
     <artifactId>suripu-research</artifactId>
     <groupId>com.hello.suripu</groupId>
     <modelVersion>4.0.0</modelVersion>
-    <version>0.5.93-SNAPSHOT</version>
+    <version>0.6.01-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
