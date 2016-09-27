@@ -30,7 +30,6 @@ import com.hello.suripu.core.models.TimelineLog;
 import com.hello.suripu.core.models.TrackerMotion;
 import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
-import com.hello.suripu.core.oauth.Scope;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.core.util.FeedbackUtils;
 import com.hello.suripu.core.util.JsonError;
@@ -40,6 +39,8 @@ import com.hello.suripu.core.util.PartnerDataUtils;
 import com.hello.suripu.core.util.SleepHmmSensorDataBinning;
 import com.hello.suripu.core.util.TimelineUtils;
 import com.hello.suripu.core.util.TrackerMotionUtils;
+import com.hello.suripu.coredropwizard.oauth.Auth;
+import com.hello.suripu.coredropwizard.oauth.ScopesAllowed;
 import com.hello.suripu.coredropwizard.resources.BaseResource;
 import com.hello.suripu.research.db.LabelDAO;
 import com.hello.suripu.research.models.BinnedSensorData;
@@ -179,7 +180,8 @@ public class DataScienceResource extends BaseResource {
     @GET
     @Path("/pill/{email}/{query_date_local_utc}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<TrackerMotion> getMotion(@Scope({OAuthScope.SENSORS_BASIC, OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<TrackerMotion> getMotion(@Auth final AccessToken accessToken,
                              @PathParam("query_date_local_utc") final String date,
                              @PathParam("email") final String email) {
         final DateTime targetDate = DateTime.parse(date, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
@@ -204,7 +206,8 @@ public class DataScienceResource extends BaseResource {
     @GET
     @Path("/motion/{id}/{query_date_local_utc}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<TrackerMotion> getMotion(@Scope({OAuthScope.SENSORS_BASIC, OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<TrackerMotion> getMotion(@Auth final AccessToken accessToken,
                                          @PathParam("query_date_local_utc") final String date,
                                          @PathParam("id") final Long id) {
         final DateTime targetDate = DateTime.parse(date, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
@@ -222,7 +225,8 @@ public class DataScienceResource extends BaseResource {
     @GET
     @Path("/pill/partner/{email}/{query_date_local_utc}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<TrackerMotion> getMotionWithPartnerMotionFiltered(@Scope({OAuthScope.SENSORS_BASIC, OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<TrackerMotion> getMotionWithPartnerMotionFiltered(@Auth final AccessToken accessToken,
                                          @PathParam("query_date_local_utc") final String date,
                                          @PathParam("email") final String email) {
         final DateTime targetDate = DateTime.parse(date, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
@@ -262,7 +266,8 @@ public class DataScienceResource extends BaseResource {
     @GET
     @Path("/light/{email}/{query_date_local_utc}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Event> getLightOut(@Scope({OAuthScope.SENSORS_BASIC, OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<Event> getLightOut(@Auth final AccessToken accessToken,
                                             @PathParam("query_date_local_utc") final String date,
                                             @PathParam("email") final String email) {
         final DateTime targetDate = DateTime.parse(date, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
@@ -284,7 +289,8 @@ public class DataScienceResource extends BaseResource {
     @GET
     @Path("/sensors/{email}/{query_date_local_utc}/{type}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Sample> getSensors(@Scope({OAuthScope.SENSORS_BASIC, OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<Sample> getSensors(@Auth final AccessToken accessToken,
                                    @PathParam("query_date_local_utc") final String date,
                                    @PathParam("type") final String dataType,
                                    @PathParam("email") final String email) {
@@ -323,7 +329,8 @@ public class DataScienceResource extends BaseResource {
     @Path("/timelinelog")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public ImmutableList<TimelineLog> getTimelineLogByUser(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public ImmutableList<TimelineLog> getTimelineLogByUser(@Auth final AccessToken accessToken,
                                                                     @QueryParam("account_id") final Long accountId,
                                                                     @QueryParam("from_ts_utc")final Long fromTimestamp,
                                                                     @DefaultValue("3") @QueryParam("num_days")final  Integer numDays
@@ -340,7 +347,8 @@ public class DataScienceResource extends BaseResource {
     @Path("/matchedfeedback")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public ImmutableList<MatchedFeedback> getAllMatchedFeedbackData(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public ImmutableList<MatchedFeedback> getAllMatchedFeedbackData(@Auth final AccessToken accessToken,
                                                                   @QueryParam("from_ts_utc")final Long fromTimestamp,
                                                                   @DefaultValue("3") @QueryParam("num_days")final  Integer numDays
     ) {
@@ -460,7 +468,8 @@ public class DataScienceResource extends BaseResource {
     @Path("/label/{email}/{night}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public List<UserLabel> getLabels(@Scope(OAuthScope.RESEARCH) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<UserLabel> getLabels(@Auth final AccessToken accessToken,
                                      @PathParam("email") String email,
                                      @PathParam("night") String night) {
         final DateTime nightDate = DateTime.parse(night, DateTimeFormat.forPattern(DateTimeUtil.DYNAMO_DB_DATE_FORMAT))
@@ -474,7 +483,8 @@ public class DataScienceResource extends BaseResource {
     @Path("/device_sensors_motion")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public List<JoinedSensorsMinuteData> getJoinedSensorDataByEmail(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<JoinedSensorsMinuteData> getJoinedSensorDataByEmail(@Auth final AccessToken accessToken,
                                                                 @QueryParam("email") String email,
                                                                 @QueryParam("account_id") Long accountId,
                                                                 @QueryParam("from_ts") Long fromTimestamp,
@@ -583,7 +593,8 @@ public class DataScienceResource extends BaseResource {
     @Path("/binneddata")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public BinnedSensorData getBinnedSensorDataByEmailOrAccountID(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public BinnedSensorData getBinnedSensorDataByEmailOrAccountID(@Auth final AccessToken accessToken,
                                                                   @QueryParam("email") String email,
                                                                   @QueryParam("account_id") Long accountId,
                                                                   @QueryParam("from_ts") Long fromTimestamp,
@@ -765,7 +776,8 @@ public class DataScienceResource extends BaseResource {
     @GET
     @Path("/partneraccountswithfeedback/{query_date_utc}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<Long> getPartnerAccountsWithFeedback(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<Long> getPartnerAccountsWithFeedback(@Auth final AccessToken accessToken,
                                                               @PathParam("query_date_utc") final String date,
                                                               @DefaultValue("1") @QueryParam("num_days") final Integer numDays) {
 
@@ -803,7 +815,8 @@ public class DataScienceResource extends BaseResource {
     @GET
     @Path("/partnerfeedback/{query_date_utc}")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<FeedbackUtc> getPartnerFeedbacks(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public List<FeedbackUtc> getPartnerFeedbacks(@Auth final AccessToken accessToken,
                                                      @PathParam("query_date_utc") final String date,
                                                      @DefaultValue("1") @QueryParam("num_days") final Integer numDays,
                                                      @DefaultValue("ALL_EVENTS")  @QueryParam("event_type") final String eventType) {

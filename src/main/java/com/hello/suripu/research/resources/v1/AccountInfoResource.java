@@ -6,7 +6,8 @@ import com.hello.suripu.core.db.DeviceDAO;
 import com.hello.suripu.core.models.Account;
 import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
-import com.hello.suripu.core.oauth.Scope;
+import com.hello.suripu.coredropwizard.oauth.Auth;
+import com.hello.suripu.coredropwizard.oauth.ScopesAllowed;
 import com.hello.suripu.research.models.PartnerAccounts;
 
 import javax.ws.rs.GET;
@@ -17,9 +18,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-/**
- * Created by pangwu on 3/6/15.
- */
+
 @Path("/v1/accounts")
 public class AccountInfoResource {
 
@@ -35,7 +34,8 @@ public class AccountInfoResource {
     @GET
     @Path("/{email}")
     @Produces(MediaType.APPLICATION_JSON)
-    public PartnerAccounts getAccountInfo(@Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public PartnerAccounts getAccountInfo(@Auth final AccessToken accessToken,
                                           @PathParam("email") final String email){
         final Optional<Account> accountOptional = this.accountDAO.getByEmail(email);
         if (!accountOptional.isPresent() || !accountOptional.get().id.isPresent()) {
