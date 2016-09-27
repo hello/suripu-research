@@ -49,7 +49,6 @@ import com.hello.suripu.core.models.TrackerMotion;
 import com.hello.suripu.core.models.timeline.v2.TimelineLog;
 import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
-import com.hello.suripu.core.oauth.Scope;
 import com.hello.suripu.core.util.AlgorithmType;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.core.util.FeatureExtractionModelData;
@@ -63,12 +62,15 @@ import com.hello.suripu.core.util.SoundUtils;
 import com.hello.suripu.core.util.TimelineError;
 import com.hello.suripu.core.util.TimelineUtils;
 import com.hello.suripu.core.util.TrackerMotionUtils;
+import com.hello.suripu.coredropwizard.oauth.Auth;
+import com.hello.suripu.coredropwizard.oauth.ScopesAllowed;
 import com.hello.suripu.coredropwizard.resources.BaseResource;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import com.hello.suripu.research.models.AlphabetsAndLabels;
 import com.hello.suripu.research.models.EventsWithLabels;
 import com.hello.suripu.research.models.FeedbackAsIndices;
 import com.hello.suripu.research.models.GeneratedModel;
+import com.librato.rollout.RolloutClient;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -76,6 +78,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -125,6 +128,10 @@ public class PredictionResource extends BaseResource {
     private final OnlineHmmModelsDAO priorsDAO;
     private final DefaultModelEnsembleDAO defaultModelEnsembleDAO;
     private final AlgorithmConfiguration algorithmConfiguration;
+
+
+    @Inject
+    RolloutClient flipper;
 
     public PredictionResource(final AccountDAO accountDAO,
                               final PillDataDAODynamoDB trackerMotionDAO,
@@ -417,8 +424,9 @@ public class PredictionResource extends BaseResource {
     @Path("/alphabet/{account_id}/{query_date_local_utc}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @ScopesAllowed({OAuthScope.RESEARCH})
     /*  Returns HMM Bayesnet model interpretations  */
-    public AlphabetsAndLabels getAlphabetsByUser(  @Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    public AlphabetsAndLabels getAlphabetsByUser(@Auth final AccessToken accessToken,
                                                          @PathParam("account_id") final  Long accountId,
                                                          @PathParam("query_date_local_utc") final String strTargetDate,
                                                          @DefaultValue("true") @QueryParam("partner_filter") final Boolean usePartnerFilter,
@@ -512,7 +520,8 @@ public class PredictionResource extends BaseResource {
     @Path("/generate_models/{account_id}/{date_string}/{num_days}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public GeneratedModel generateModelsForUser( @Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+    @ScopesAllowed({OAuthScope.RESEARCH})
+    public GeneratedModel generateModelsForUser(@Auth final AccessToken accessToken,
                                                                    @PathParam("account_id") final  Long accountId,
                                                                    @PathParam("date_string") final  String dateString,
                                                                    @PathParam("num_days") final  Integer numDays,
@@ -741,8 +750,9 @@ public class PredictionResource extends BaseResource {
     @Path("/sleep_events/{account_id}/{query_date_local_utc}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    @ScopesAllowed({OAuthScope.RESEARCH})
     public EventsWithLabels getSleepPredictionsByUserAndAlgorithm(
-            @Scope({OAuthScope.RESEARCH}) final AccessToken accessToken,
+            @Auth final AccessToken accessToken,
             @PathParam("account_id") final  Long accountId,
             @PathParam("query_date_local_utc") final String strTargetDate,
             @DefaultValue(ALGORITHM_HIDDEN_MARKOV) @QueryParam("algorithm") final String algorithm,

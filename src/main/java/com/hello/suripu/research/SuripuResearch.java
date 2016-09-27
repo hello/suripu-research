@@ -32,6 +32,7 @@ import com.hello.suripu.core.db.UserLabelDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
+import com.hello.suripu.core.flipper.DynamoDBAdapter;
 import com.hello.suripu.core.logging.DataLogger;
 import com.hello.suripu.core.logging.DataLoggerBatchPayload;
 import com.hello.suripu.core.logging.KinesisBatchPutResult;
@@ -58,12 +59,14 @@ import com.hello.suripu.research.modules.RolloutResearchModule;
 import com.hello.suripu.research.resources.v1.AccountInfoResource;
 import com.hello.suripu.research.resources.v1.DataScienceResource;
 import com.hello.suripu.research.resources.v1.PredictionResource;
+import com.librato.rollout.RolloutClient;
 import io.dropwizard.Application;
 import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.jdbi.bundles.DBIExceptionsBundle;
 import io.dropwizard.server.AbstractServerFactory;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.skife.jdbi.v2.DBI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -214,7 +217,14 @@ public class SuripuResearch extends Application<SuripuResearchConfiguration> {
         environment.jersey().register(new ScopesAllowedDynamicFeature(applicationStore));
         environment.jersey().register(new AuthValueFactoryProvider.Binder<>(AccessToken.class));
 
+        final RolloutClient rolloutClient = new RolloutClient(new DynamoDBAdapter(featureStore, 30));
 
+        environment.jersey().register(new AbstractBinder() {
+            @Override
+            protected void configure() {
+                bind(rolloutClient).to(RolloutClient.class);
+            }
+        });
         environment.jersey().register(new DataScienceResource(accountDAO, pillDataDAODynamoDB,deviceDataDAODynamoDB, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
         environment.jersey().register(new PredictionResource(accountDAO,pillDataDAODynamoDB, deviceDataDAODynamoDB,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO, configuration.getAlgorithmConfiguration()));
         environment.jersey().register(new AccountInfoResource(accountDAO, deviceDAO));
