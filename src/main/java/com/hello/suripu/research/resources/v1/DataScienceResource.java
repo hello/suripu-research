@@ -6,14 +6,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
 import com.hello.suripu.core.algorithmintegration.OnlineHmmSensorDataBinning;
 import com.hello.suripu.core.db.AccountDAO;
 import com.hello.suripu.core.db.DeviceDAO;
-import com.hello.suripu.core.db.DeviceDataDAO;
+import com.hello.suripu.core.db.DeviceDataDAODynamoDB;
 import com.hello.suripu.core.db.FeedbackDAO;
+import com.hello.suripu.core.db.PillDataDAODynamoDB;
 import com.hello.suripu.core.db.TimelineLogDAO;
-import com.hello.suripu.core.db.TrackerMotionDAO;
 import com.hello.suripu.core.db.UserLabelDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.models.Account;
@@ -26,14 +25,12 @@ import com.hello.suripu.core.models.DeviceAccountPair;
 import com.hello.suripu.core.models.Event;
 import com.hello.suripu.core.models.Sample;
 import com.hello.suripu.core.models.Sensor;
-import com.hello.suripu.core.models.Timeline;
 import com.hello.suripu.core.models.TimelineFeedback;
 import com.hello.suripu.core.models.TimelineLog;
 import com.hello.suripu.core.models.TrackerMotion;
 import com.hello.suripu.core.oauth.AccessToken;
 import com.hello.suripu.core.oauth.OAuthScope;
 import com.hello.suripu.core.oauth.Scope;
-import com.hello.suripu.coredw.resources.BaseResource;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.core.util.FeedbackUtils;
 import com.hello.suripu.core.util.JsonError;
@@ -43,6 +40,7 @@ import com.hello.suripu.core.util.PartnerDataUtils;
 import com.hello.suripu.core.util.SleepHmmSensorDataBinning;
 import com.hello.suripu.core.util.TimelineUtils;
 import com.hello.suripu.core.util.TrackerMotionUtils;
+import com.hello.suripu.coredropwizard.resources.BaseResource;
 import com.hello.suripu.research.db.LabelDAO;
 import com.hello.suripu.research.models.BinnedSensorData;
 import com.hello.suripu.research.models.FeedbackUtc;
@@ -79,8 +77,8 @@ import java.util.Set;
 public class DataScienceResource extends BaseResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(DataScienceResource.class);
     private final AccountDAO accountDAO;
-    private final TrackerMotionDAO trackerMotionDAO;
-    private final DeviceDataDAO deviceDataDAO;
+    private final PillDataDAODynamoDB trackerMotionDAO;
+    private final DeviceDataDAODynamoDB deviceDataDAO;
     private final DeviceDAO deviceDAO;
     private final FeedbackDAO feedbackDAO;
     private final UserLabelDAO userLabelDAO;
@@ -92,8 +90,8 @@ public class DataScienceResource extends BaseResource {
     public static final String BINNING_SOURCE_BAYES = "bayes";
 
     public DataScienceResource(final AccountDAO accountDAO,
-                               final TrackerMotionDAO trackerMotionDAO,
-                               final DeviceDataDAO deviceDataDAO,
+                               final PillDataDAODynamoDB trackerMotionDAO,
+                               final DeviceDataDAODynamoDB deviceDataDAO,
                                final DeviceDAO deviceDAO,
                                final UserLabelDAO userLabelDAO,
                                final FeedbackDAO feedbackDAO,
@@ -210,31 +208,29 @@ public class DataScienceResource extends BaseResource {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
 
-        final Optional<Long> internalSenseIdOptional = this.deviceDAO.getMostRecentSenseByAccountId(accountId.get());
+        final Optional<DeviceAccountPair> pair = this.deviceDAO.getMostRecentSensePairByAccountId(accountId.get());
 
-        if(!internalSenseIdOptional.isPresent()){
+        if(!pair.isPresent()){
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
 
-        if (internalSenseIdOptional.isPresent()) {
-            final int slotDurationMins = 1;
 
-            final AllSensorSampleList sensorData = deviceDataDAO.generateTimeSeriesByLocalTimeAllSensors(
-                    targetDate.getMillis(), endDate.getMillis(),
-                    accountId.get(), internalSenseIdOptional.get(),
-                    slotDurationMins,
-                    missingDataDefaultValue(accountId.get()),
-                    Optional.<Device.Color>absent(),
-                    Optional.of(Calibration.createDefault("dummy-sense")),
-                            true
-                );
-            final List<Sample> lightData = sensorData.get(Sensor.LIGHT);
-            final TimelineUtils timelineUtils = new TimelineUtils();
-            final List<Event> lightEvents = timelineUtils.getLightEventsWithMultipleLightOut(lightData);
-            return lightEvents;
-        }
+        final int slotDurationMins = 1;
 
-        throw new WebApplicationException(Response.Status.NOT_FOUND);
+        final AllSensorSampleList sensorData = deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
+                targetDate.getMillis(), endDate.getMillis(),
+                accountId.get(), pair.get().externalDeviceId,
+                slotDurationMins,
+                missingDataDefaultValue(accountId.get()),
+                Optional.<Device.Color>absent(),
+                Optional.of(Calibration.createDefault("dummy-sense")),
+                        true
+            );
+        final List<Sample> lightData = sensorData.get(Sensor.LIGHT);
+        final TimelineUtils timelineUtils = new TimelineUtils();
+        final List<Event> lightEvents = timelineUtils.getLightEventsWithMultipleLightOut(lightData);
+        return lightEvents;
+
     }
 
 
@@ -256,23 +252,26 @@ public class DataScienceResource extends BaseResource {
             LOGGER.debug("ID not found for account {}", email);
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-        final Optional<Long> deviceId = this.deviceDAO.getMostRecentSenseByAccountId(accountId.get());
-        if (deviceId.isPresent()) {
-            final int slotDurationMins = 1;
 
-            AllSensorSampleList sensorData = this.deviceDataDAO.generateTimeSeriesByLocalTimeAllSensors(
-                    targetDate.getMillis(), endDate.getMillis(),
-                    accountId.get(), deviceId.get(),
-                    slotDurationMins,
-                    missingDataDefaultValue(accountId.get()),
-                    Optional.<Device.Color>absent(),
-                    Optional.of(Calibration.createDefault("dummy-sense")),
-                    true
-            );
-            final List<Sample> data = sensorData.get(Sensor.valueOf(dataType));
-            return data;
+        final Optional<DeviceAccountPair> pair = this.deviceDAO.getMostRecentSensePairByAccountId(accountId.get());
+
+        if(!pair.isPresent()){
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-        throw new WebApplicationException(Response.Status.NOT_FOUND);
+
+        final int slotDurationMins = 1;
+
+        AllSensorSampleList sensorData = this.deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
+                targetDate.getMillis(), endDate.getMillis(),
+                accountId.get(), pair.get().externalDeviceId,
+                slotDurationMins,
+                missingDataDefaultValue(accountId.get()),
+                Optional.<Device.Color>absent(),
+                Optional.of(Calibration.createDefault("dummy-sense")),
+                true
+        );
+        final List<Sample> data = sensorData.get(Sensor.valueOf(dataType));
+        return data;
     }
 
     private Optional<Long> getAccountIdByEmail(final String email) {
@@ -504,11 +503,11 @@ public class DataScienceResource extends BaseResource {
 
         final int slotDurationInMinutes = 1;
         final Integer missingDataDefaultValue = 0;
-        final AllSensorSampleList sensorSamples = deviceDataDAO.generateTimeSeriesByLocalTimeAllSensors(
+        final AllSensorSampleList sensorSamples = deviceDataDAO.generateTimeSeriesByUTCTimeAllSensors(
                 startTs.getMillis(),
                 endTs.getMillis(),
                 accountId,
-                deviceAccountPairOptional.get().internalDeviceId,
+                deviceAccountPairOptional.get().externalDeviceId,
                 slotDurationInMinutes,
                 missingDataDefaultValue,
                 Optional.<Device.Color>absent(),
@@ -677,7 +676,7 @@ public class DataScienceResource extends BaseResource {
                 startTs.minusMillis(timezoneOffset).getMillis(),
                 endTs.minusMillis(timezoneOffset).getMillis(),
                 accountId,
-                deviceAccountPairOptional.get().internalDeviceId,
+                deviceAccountPairOptional.get().externalDeviceId,
                 slotDurationInMinutes,
                 missingDataDefaultValue,
                 color,
