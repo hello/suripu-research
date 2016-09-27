@@ -38,7 +38,9 @@ import com.hello.suripu.core.logging.DataLoggerBatchPayload;
 import com.hello.suripu.core.logging.KinesisBatchPutResult;
 import com.hello.suripu.core.oauth.stores.PersistentApplicationStore;
 import com.hello.suripu.coredropwizard.clients.AmazonDynamoDBClientFactory;
+import com.hello.suripu.coredropwizard.clients.TaimurainHttpClient;
 import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredropwizard.configuration.TaimurainHttpClientConfiguration;
 import com.hello.suripu.coredropwizard.db.AccessTokenDAO;
 import com.hello.suripu.coredropwizard.db.AuthorizationCodeDAO;
 import com.hello.suripu.coredropwizard.db.SleepHmmDAODynamoDB;
@@ -61,6 +63,7 @@ import com.hello.suripu.research.resources.v1.DataScienceResource;
 import com.hello.suripu.research.resources.v1.PredictionResource;
 import com.librato.rollout.RolloutClient;
 import io.dropwizard.Application;
+import io.dropwizard.client.HttpClientBuilder;
 import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.jdbi.bundles.DBIExceptionsBundle;
 import io.dropwizard.server.AbstractServerFactory;
@@ -172,6 +175,11 @@ public class SuripuResearch extends Application<SuripuResearchConfiguration> {
         final AmazonDynamoDB timelineLogDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.TIMELINE_LOG);
         final TimelineLogDAO timelineLogDAO = new TimelineLogDAODynamoDB(timelineLogDynamoDBClient,timelineLogTableName);
 
+        /* Neural net endpoint information */
+        final TaimurainHttpClientConfiguration taimurainHttpClientConfiguration = configuration.getTaimurainHttpClientConfiguration();
+        final TaimurainHttpClient taimurainHttpClient = TaimurainHttpClient.create(
+                new HttpClientBuilder(environment).using(taimurainHttpClientConfiguration.getHttpClientConfiguration()).build("taimurain"),
+                taimurainHttpClientConfiguration.getEndpoint());
 
         final RolloutResearchModule module = new RolloutResearchModule(featureStore, 30);
         ObjectGraphRoot.getInstance().init(module);
@@ -225,8 +233,25 @@ public class SuripuResearch extends Application<SuripuResearchConfiguration> {
                 bind(rolloutClient).to(RolloutClient.class);
             }
         });
-        environment.jersey().register(new DataScienceResource(accountDAO, pillDataDAODynamoDB,deviceDataDAODynamoDB, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
-        environment.jersey().register(new PredictionResource(accountDAO,pillDataDAODynamoDB, deviceDataDAODynamoDB,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO, configuration.getAlgorithmConfiguration()));
+
         environment.jersey().register(new AccountInfoResource(accountDAO, deviceDAO));
+
+        environment.jersey().register(new DataScienceResource(accountDAO, pillDataDAODynamoDB,deviceDataDAODynamoDB, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
+
+        environment.jersey().register(new PredictionResource(
+                accountDAO,
+                pillDataDAODynamoDB,
+                deviceDataDAODynamoDB,
+                deviceDAO,
+                userLabelDAO,
+                sleepHmmDAODynamoDB,
+                feedbackDAO,
+                senseColorDAO,
+                featureExtractionDAO,
+                priorsDAO,
+                defaultModelEnsembleDAO,
+                configuration.getAlgorithmConfiguration(),
+                taimurainHttpClient
+        ));
     }
 }

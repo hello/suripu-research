@@ -110,6 +110,7 @@ public class PredictionResource extends BaseResource {
     private static final String ALGORITHM_VOTING = "voting";
     private static final String ALGORITHM_HIDDEN_MARKOV = "hmm";
     private static final String ALGORITHM_ONLINEHMM = "online";
+    private static final String ALGORITHM_NEURAL_NET = "net";
 
     private static final Integer MISSING_DATA_DEFAULT_VALUE = 0;
     private static final Integer SLOT_DURATION_MINUTES = 1;
@@ -128,6 +129,7 @@ public class PredictionResource extends BaseResource {
     private final OnlineHmmModelsDAO priorsDAO;
     private final DefaultModelEnsembleDAO defaultModelEnsembleDAO;
     private final AlgorithmConfiguration algorithmConfiguration;
+    private final NeuralNetEndpoint neuralNetEndpoint;
 
 
     @Inject
@@ -144,7 +146,8 @@ public class PredictionResource extends BaseResource {
                               final FeatureExtractionModelsDAO featureExtractionModelsDAO,
                               final OnlineHmmModelsDAO priorsDAO,
                               final DefaultModelEnsembleDAO defaultModelEnsembleDAO,
-                              final AlgorithmConfiguration algorithmConfiguration) {
+                              final AlgorithmConfiguration algorithmConfiguration,
+                              final NeuralNetEndpoint neuralNetEndpoint) {
 
         this.accountDAO = accountDAO;
         this.trackerMotionDAO = trackerMotionDAO;
@@ -159,6 +162,7 @@ public class PredictionResource extends BaseResource {
         this.priorsDAO = priorsDAO;
         this.defaultModelEnsembleDAO = defaultModelEnsembleDAO;
         this.algorithmConfiguration = algorithmConfiguration;
+        this.neuralNetEndpoint = neuralNetEndpoint;
     }
 
 
@@ -808,13 +812,13 @@ public class PredictionResource extends BaseResource {
             }
         };
 
-        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO, priorsDAO, defaultModelEnsembleDAO,featureExtractionModelsDAO,temporaryEmptyEndpoint, algorithmConfiguration, Optional.<UUID>absent());
+        final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO, priorsDAO, defaultModelEnsembleDAO,featureExtractionModelsDAO,neuralNetEndpoint, algorithmConfiguration, Optional.<UUID>absent());
 
         final TimelineLog timelineLog = new TimelineLog(accountId,dateOfNight.getMillis());
 
         Optional<TimelineAlgorithmResult> resultOptional = Optional.absent();
 
-        Set<String> something = Sets.newHashSet();
+        final Set<String> something = Sets.newHashSet();
 
         switch (algorithm) {
             case ALGORITHM_VOTING:
@@ -827,6 +831,10 @@ public class PredictionResource extends BaseResource {
 
             case ALGORITHM_ONLINEHMM:
                 resultOptional = factory.get(AlgorithmType.ONLINE_HMM).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false, something);
+                break;
+
+            case ALGORITHM_NEURAL_NET:
+                resultOptional = factory.get(AlgorithmType.NEURAL_NET).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false,something);
                 break;
 
             default:

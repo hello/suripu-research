@@ -3,6 +3,7 @@ package com.hello.suripu.research.configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hello.suripu.coredropwizard.configuration.NewDynamoDBConfiguration;
 import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredropwizard.configuration.TaimurainHttpClientConfiguration;
 import com.hello.suripu.coredropwizard.configuration.TimelineAlgorithmConfiguration;
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DataSourceFactory;
@@ -75,4 +76,9 @@ public class SuripuResearchConfiguration extends Configuration {
     public TimelineAlgorithmConfiguration getAlgorithmConfiguration() {
         return algorithmConfiguration;
     }
+
+    @NotNull
+    @JsonProperty("taimurain_http_client")
+    private TaimurainHttpClientConfiguration taimurainHttpClientConfiguration;
+    public TaimurainHttpClientConfiguration getTaimurainHttpClientConfiguration() { return taimurainHttpClientConfiguration; }
 }
