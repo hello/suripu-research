@@ -90,11 +90,8 @@ public class SuripuResearch extends Application<SuripuResearchConfiguration> {
     public void run(SuripuResearchConfiguration configuration, Environment environment) throws Exception {
         final DBIFactory factory = new DBIFactory();
         final DBI commonDB = factory.build(environment, configuration.getCommonDB(), "postgresql");
-        final DBI researchDB = factory.build(environment, configuration.getResearchDB(), "postgresql");
 
         commonDB.registerArgumentFactory(new PostgresIntegerArrayArgumentFactory());
-
-        researchDB.registerArgumentFactory(new PostgresIntegerArrayArgumentFactory());
 
         final LabelDAO labelDAO = commonDB.onDemand(LabelDAOImpl.class);
         final AccountDAO accountDAO = commonDB.onDemand(AccountDAOImpl.class);
@@ -218,10 +215,7 @@ public class SuripuResearch extends Application<SuripuResearchConfiguration> {
         environment.jersey().register(new AuthValueFactoryProvider.Binder<>(AccessToken.class));
 
 
-        environment.jersey().register(new DataScienceResource(accountDAO, pillDataDAODynamoDB,
-                deviceDataDAODynamoDB, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
-
-
+        environment.jersey().register(new DataScienceResource(accountDAO, pillDataDAODynamoDB,deviceDataDAODynamoDB, deviceDAO, userLabelDAO, feedbackDAO,timelineLogDAO,labelDAO,senseColorDAO));
         environment.jersey().register(new PredictionResource(accountDAO,pillDataDAODynamoDB, deviceDataDAODynamoDB,deviceDAO, userLabelDAO,sleepHmmDAODynamoDB,feedbackDAO,senseColorDAO,featureExtractionDAO,priorsDAO,defaultModelEnsembleDAO, configuration.getAlgorithmConfiguration()));
         environment.jersey().register(new AccountInfoResource(accountDAO, deviceDAO));
     }

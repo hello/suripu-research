@@ -1,5 +1,6 @@
 debug: true
 
+
 common_db:
   # the name of your JDBC driver
   driverClass: org.postgresql.Driver
@@ -17,22 +18,6 @@ common_db:
   properties:
     charSet: UTF-8
 
-research_db:
-  # the name of your JDBC driver
-  driverClass: org.postgresql.Driver
-
-  # the username
-  user: your local-db user name
-
-  # the password
-  password: your local-db password
-
-  # the JDBC URL
-  url: jdbc:postgresql://localhost:5432/research
-
-  # any properties specific to your JDBC driver:
-  properties:
-    charSet: UTF-8
 
 server:
   adminMinThreads: 1
@@ -41,10 +26,10 @@ server:
   applicationContextPath: /
   applicationConnectors:
     - type: http
-      port: 9999
+      port: 9988
   adminConnectors:
     - type: http
-      port: 9998
+      port: 9987
   requestLog:
     appenders:
       - type: console
@@ -129,7 +114,7 @@ dynamodb:
     algorithm_test: http://localhost:7777
     app_stats: http://localhost:7777
     calibration: http://localhost:7777
-    device_data: http://localhost:7777
+    device_data: http://localhost:7777 
     feature_extraction_models: http://localhost:7777
     features: http://localhost:7777
     file_manifest: http://localhost:7777
@@ -140,7 +125,7 @@ dynamodb:
     online_hmm_models: http://localhost:7777
     ota_history: http://localhost:7777
     password_reset: http://localhost:7777
-    pill_data: http://localhost:7777
+    pill_data: http://localhost:7777 
     pill_heartbeat: http://localhost:7777
     pill_key_store: http://localhost:7777
     preferences: http://localhost:7777

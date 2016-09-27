@@ -22,6 +22,7 @@ public class SuripuResearchConfiguration extends Configuration {
         return commonDB;
     }
 
+    /*
     @Valid
     @NotNull
     @JsonProperty("research_db")
@@ -29,7 +30,7 @@ public class SuripuResearchConfiguration extends Configuration {
     public DataSourceFactory getResearchDB() {
         return researchDB;
     }
-
+    */
 
     @Valid
     @JsonProperty("debug")
