@@ -743,7 +743,7 @@ public class PredictionResource extends BaseResource {
                 dateOfEvening,
                 startTimeLocalUtc,
                 endTimeLocalUtc,
-                endTimeLocalUtc,
+                endTimeLocalUtc.minusMillis(tzOffsetMillis),
                 tzOffsetMillis));
 
 
