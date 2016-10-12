@@ -115,7 +115,7 @@ public class PredictionResource extends BaseResource {
     private static final Integer MISSING_DATA_DEFAULT_VALUE = 0;
     private static final Integer SLOT_DURATION_MINUTES = 1;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DataScienceResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PredictionResource.class);
     private final AccountDAO accountDAO;
     private final PillDataDAODynamoDB trackerMotionDAO;
     private final DeviceDataDAODynamoDB deviceDataDAO;
@@ -358,6 +358,22 @@ public class PredictionResource extends BaseResource {
     }
 
 
+    public List<TrackerMotion> dropSmallMotions(final List<TrackerMotion> motions) {
+
+        final List<TrackerMotion> filteredMotions = Lists.newArrayList();
+
+        for (final TrackerMotion m : motions) {
+
+            if (m.value <= 750) {
+                continue;
+            }
+
+            filteredMotions.add(m);
+
+        }
+        return filteredMotions;
+    }
+
     public SensorData getSensorData(final DateTime targetDate,final DateTime endDate, final Long accountId, boolean usePartnerFilter,boolean useOutlierFilter) {
         final Optional<DeviceAccountPair> deviceIdPair = deviceDAO.getMostRecentSensePairByAccountId(accountId);
 
@@ -367,8 +383,16 @@ public class PredictionResource extends BaseResource {
         }
 
         /* Get "Pill" data  */
-        List<TrackerMotion> myMotions = trackerMotionDAO.getBetweenLocalUTC(accountId, targetDate, endDate);
-        List<TrackerMotion> partnerMotions = getPartnerTrackerMotion(accountId, targetDate, endDate);
+        List<TrackerMotion> myMotions1 = (trackerMotionDAO.getBetweenLocalUTC(accountId, targetDate, endDate));
+        List<TrackerMotion> myMotions = dropSmallMotions(myMotions1);
+        final int droppedSamples = myMotions1.size() - myMotions.size();
+
+        List<TrackerMotion> partnerMotions1 = (getPartnerTrackerMotion(accountId, targetDate, endDate));
+        List<TrackerMotion> partnerMotions = dropSmallMotions(partnerMotions1);
+
+        if (droppedSamples > 0) {
+            LOGGER.info("pill 1.5 dropped {} samples", droppedSamples);
+        }
 
         if (useOutlierFilter) {
             myMotions = OutlierFilter.removeOutliers(myMotions,OUTLIER_GUARD_DURATION,DOMINANT_GROUP_DURATION);
@@ -693,8 +717,16 @@ public class PredictionResource extends BaseResource {
         }
 
         /* Get "Pill" data  */
-        List<TrackerMotion> myMotions = trackerMotionDAO.getBetweenLocalUTC(accountId, startTimeLocalUtc, endTimeLocalUtc);
-        List<TrackerMotion> partnerMotions = getPartnerTrackerMotion(accountId, startTimeLocalUtc, endTimeLocalUtc);
+        List<TrackerMotion> myMotions1 = trackerMotionDAO.getBetweenLocalUTC(accountId, startTimeLocalUtc, endTimeLocalUtc);
+        List<TrackerMotion> myMotions = dropSmallMotions(myMotions1);
+        final int droppedSamples = myMotions1.size() - myMotions.size();
+
+        List<TrackerMotion> partnerMotions1 = getPartnerTrackerMotion(accountId, startTimeLocalUtc, endTimeLocalUtc);
+        List<TrackerMotion> partnerMotions = dropSmallMotions(partnerMotions1);
+
+        if (droppedSamples > 0) {
+            LOGGER.info("pill 1.5 dropped {} samples", droppedSamples);
+        }
 
         if (useOutlierFilter) {
             myMotions = OutlierFilter.removeOutliers(myMotions,OUTLIER_GUARD_DURATION,DOMINANT_GROUP_DURATION);
@@ -720,10 +752,12 @@ public class PredictionResource extends BaseResource {
             motions.addAll(myMotions);
         }
 
+        /*
         if (InstrumentedTimelineProcessor.isValidNight(accountId,myMotions,motions) != TimelineError.NO_ERROR) {
             LOGGER.warn("not a valid night");
             return Optional.absent();
         };
+        */
 
         // get all sensor data, used for light and sound disturbances, and presleep-insights
         AllSensorSampleList allSensorSampleList = new AllSensorSampleList();
@@ -794,6 +828,7 @@ public class PredictionResource extends BaseResource {
 
 
 
+        /* get sensor data */
         final Optional<OneDaysSensorData> oneDaysSensorDataOptional = getOneDaysSensorData(accountId,dateOfNight,targetDate,endDate,usePartnerFilter,forceLearning,useOutlierFilter);
 
         if (!oneDaysSensorDataOptional.isPresent()) {
@@ -804,14 +839,7 @@ public class PredictionResource extends BaseResource {
         final OneDaysSensorData oneDaysSensorData = oneDaysSensorDataOptional.get();
 
 
-         /*  pull out algorithm type */
-        final NeuralNetEndpoint temporaryEmptyEndpoint = new NeuralNetEndpoint() {
-            @Override
-            public Optional<NeuralNetAlgorithmOutput> getNetOutput(String s, double[][] doubles) {
-                return Optional.absent();
-            }
-        };
-
+        //create the factory
         final AlgorithmFactory factory = AlgorithmFactory.create(sleepHmmDAO, priorsDAO, defaultModelEnsembleDAO,featureExtractionModelsDAO,neuralNetEndpoint, algorithmConfiguration, Optional.<UUID>absent());
 
         final TimelineLog timelineLog = new TimelineLog(accountId,dateOfNight.getMillis());
@@ -820,6 +848,7 @@ public class PredictionResource extends BaseResource {
 
         final Set<String> something = Sets.newHashSet();
 
+        //do algorithm
         switch (algorithm) {
             case ALGORITHM_VOTING:
                 resultOptional = factory.get(AlgorithmType.VOTING).get().getTimelinePrediction(oneDaysSensorData,timelineLog,accountId,false, something);
