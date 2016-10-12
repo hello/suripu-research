@@ -720,7 +720,7 @@ public class PredictionResource extends BaseResource {
             motions.addAll(myMotions);
         }
 
-        if (InstrumentedTimelineProcessor.isValidNight(accountId,myMotions,motions) != TimelineError.NO_ERROR) {
+        if (InstrumentedTimelineProcessor.isValidNight(accountId,myMotions,motions,partnerMotions,true) != TimelineError.NO_ERROR) {
             LOGGER.warn("not a valid night");
             return Optional.absent();
         };
@@ -845,6 +845,20 @@ public class PredictionResource extends BaseResource {
 
         if (resultOptional.isPresent()) {
             events = resultOptional.get().mainEvents.values().asList();
+
+            final Event sleep = resultOptional.get().mainEvents.get(Event.Type.SLEEP);
+            final Event wake = resultOptional.get().mainEvents.get(Event.Type.WAKE_UP);
+
+            final boolean motionDuringSleep = timelineUtils.motionDuringSleepCheck(oneDaysSensorData.originalTrackerMotions, sleep.getStartTimestamp(),wake.getStartTimestamp());
+
+            if (!motionDuringSleep) {
+                LOGGER.warn("action=zeroing-score  account_id={} reason=insufficient-motion-during-sleeptime night_of={}", accountId, targetDate);
+
+                throw new WebApplicationException(Response.status(Response.Status.NO_CONTENT)
+                        .entity(new JsonError(204, "no motion found during sleep")).build());
+
+            }
+
         }
 
         
@@ -856,6 +870,8 @@ public class PredictionResource extends BaseResource {
         for (FeedbackUtils.EventWithTime eventWithTime : feedbacksAsEvents) {
             feedbackEvents.add(eventWithTime.event);
         }
+
+
 
         final EventsWithLabels eventsWithLabels = new EventsWithLabels(events,Lists.newArrayList(feedbackEvents));
 
