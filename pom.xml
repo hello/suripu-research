@@ -3,7 +3,7 @@
     <artifactId>suripu-research</artifactId>
     <groupId>com.hello.suripu</groupId>
     <modelVersion>4.0.0</modelVersion>
-    <version>0.6.01-SNAPSHOT</version>
+    <version>0.7.01-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -226,8 +226,24 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.hello.suripu.research.runners.HmmRunner</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
+
 
 
 </project>
